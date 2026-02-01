@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="style.css">
     
     <!-- Библиотеки -->
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.10.1/mathjs.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -18,6 +18,7 @@
         <header>
             <div class="header-content">
                 <h1>🧮 Анализатор математических функций</h1>
+                <p class="subtitle">Интерактивный инструмент для анализа и построения графиков</p>
             </div>
         </header>
 
@@ -26,51 +27,58 @@
             <div class="input-card">
                 <h3>🔍 Введите функцию</h3>
                 <div class="input-area">
-                    <input type="text" id="functionInput" value="x^2">
+                    <input type="text" id="functionInput" 
+                           placeholder="Например: x^2 - 3*x + 2">
                     <button id="calculateBtn" class="primary-btn">Анализировать</button>
                 </div>
                 <div class="hint-box">
-                    <p><strong>📝 Как вводить:</strong> Используйте * для умножения, ^ для степени</p>
-                    <p><strong>Примеры:</strong> 2*x + 3, x^2, sin(x), 1/x, exp(x)</p>
+                    <p><strong>📝 Как вводить:</strong></p>
+                    <ul>
+                        <li><code>2*x + 3</code> — умножение</li>
+                        <li><code>x^2</code> — степень</li>
+                        <li><code>sin(x)</code>, <code>cos(x)</code> — тригонометрия</li>
+                        <li><code>log(x)</code>, <code>exp(x)</code> — логарифмы и экспоненты</li>
+                    </ul>
                 </div>
                 
                 <div class="quick-examples">
                     <p><strong>⚡ Быстрые примеры:</strong></p>
                     <div class="example-buttons">
                         <button class="example-btn" data-func="x^2">x²</button>
-                        <button class="example-btn" data-func="2*x + 1">2x+1</button>
-                        <button class="example-btn" data-func="x^2 - 4">x²-4</button>
+                        <button class="example-btn" data-func="x^3 - 3*x">x³-3x</button>
                         <button class="example-btn" data-func="sin(x)">sin(x)</button>
                         <button class="example-btn" data-func="1/x">1/x</button>
-                        <button class="example-btn" data-func="x^3">x³</button>
+                        <button class="example-btn" data-func="exp(x)">eˣ</button>
+                        <button class="example-btn" data-func="log(x)">ln(x)</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Основной контент -->
+        <!-- Основной контент: СВОЙСТВА слева, ГРАФИК справа -->
         <div class="main-content">
-            <!-- Свойства функции слева -->
+            <!-- Свойства функции (СЛЕВА) -->
             <div class="properties-card">
                 <div class="card-header">
                     <h3>📊 Свойства функции</h3>
-                    <div class="function-display" id="currentFunction">f(x) = x^2</div>
+                    <div class="function-display" id="currentFunction">f(x) = не указана</div>
                 </div>
                 
                 <div id="propertiesOutput">
                     <div class="empty-state">
                         <div class="empty-icon">📈</div>
-                        <p>Нажмите "Анализировать"</p>
+                        <p>Функция не проанализирована</p>
+                        <p>Введите функцию и нажмите "Анализировать"</p>
                     </div>
                 </div>
             </div>
 
-            <!-- График справа -->
+            <!-- График (СПРАВА) -->
             <div class="graph-card">
                 <div class="card-header">
                     <h3>📈 График функции</h3>
                     <div class="graph-stats">
-                        <span id="graphStatus">Готов к работе</span>
+                        <span id="graphStatus">Ожидание данных...</span>
                     </div>
                 </div>
                 
@@ -78,16 +86,43 @@
                 
                 <div class="graph-controls">
                     <div class="control-group">
-                        <label>Диапазон:</label>
-                        <input type="range" id="xRange" min="1" max="20" value="10">
-                        <span>±<span id="rangeValue">10</span></span>
+                        <label>Диапазон по X:</label>
+                        <input type="range" id="xRange" min="1" max="20" value="10" class="range-slider">
+                        <span class="range-value">±<span id="rangeValue">10</span></span>
                     </div>
                     
                     <div class="control-buttons">
-                        <button id="zoomInBtn">➕</button>
-                        <button id="zoomOutBtn">➖</button>
-                        <button id="resetViewBtn">⟲</button>
+                        <button id="zoomInBtn" class="control-btn">➕ Увеличить</button>
+                        <button id="zoomOutBtn" class="control-btn">➖ Уменьшить</button>
+                        <button id="resetViewBtn" class="control-btn">🔄 Сбросить</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Информация о возможностях -->
+        <div class="capabilities-section">
+            <h3>✨ Возможности анализатора</h3>
+            <div class="capabilities-grid">
+                <div class="capability">
+                    <div class="capability-icon">🔍</div>
+                    <h4>Определение типа</h4>
+                    <p>Линейные, квадратичные, тригонометрические, показательные и другие функции</p>
+                </div>
+                <div class="capability">
+                    <div class="capability-icon">📐</div>
+                    <h4>Основные свойства</h4>
+                    <p>Область определения, нули функции, чётность, пересечения с осями</p>
+                </div>
+                <div class="capability">
+                    <div class="capability-icon">📈</div>
+                    <h4>Точные графики</h4>
+                    <p>Интерактивные графики с масштабированием и детальным отображением</p>
+                </div>
+                <div class="capability">
+                    <div class="capability-icon">⚡</div>
+                    <h4>Быстрый анализ</h4>
+                    <p>Мгновенный расчёт свойств и построение графиков</p>
                 </div>
             </div>
         </div>
@@ -114,276 +149,41 @@
 
         <!-- Подвал -->
         <footer>
-            <p>© 2026 Анализатор математических функций</p>
+            <div class="footer-content">
+                <p>© 2026 Анализатор математических функций</p>
+                <p class="footer-note">Проект создан для анализа математических функций</p>
+            </div>
         </footer>
     </div>
 
     <!-- Наш JavaScript -->
+    <script src="script.js"></script>
+    
+    <!-- Встроенный скрипт для обработки UI -->
     <script>
-        // ===== ПРОСТОЙ РАБОЧИЙ КОД =====
+        // Обработка примеров
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const func = this.getAttribute('data-func');
+                document.getElementById('functionInput').value = func;
+                document.getElementById('calculateBtn').click();
+            });
+        });
+
+        // Слайдер диапазона
+        const rangeSlider = document.getElementById('xRange');
+        const rangeValue = document.getElementById('rangeValue');
         
-        // Проверяем загрузку библиотек
-        function checkLibraries() {
-            console.log('Проверка библиотек...');
-            console.log('Math.js loaded:', typeof math !== 'undefined');
-            console.log('Plotly.js loaded:', typeof Plotly !== 'undefined');
-            
-            if (typeof math === 'undefined') {
-                console.error('Math.js не загружена!');
-                // Пробуем загрузить заново
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.10.1/mathjs.min.js';
-                script.onload = initApp;
-                document.head.appendChild(script);
-            } else {
-                initApp();
+        rangeSlider.addEventListener('input', function() {
+            rangeValue.textContent = this.value;
+        });
+
+        // Enter для ввода
+        document.getElementById('functionInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('calculateBtn').click();
             }
-        }
-        
-        function initApp() {
-            console.log('🚀 Приложение инициализировано');
-            
-            // Элементы
-            const input = document.getElementById('functionInput');
-            const btn = document.getElementById('calculateBtn');
-            const plotDiv = document.getElementById('plot');
-            
-            // Инициализация графика
-            Plotly.newPlot(plotDiv, [{
-                x: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
-                y: [25, 16, 9, 4, 1, 0, 1, 4, 9, 16, 25],
-                type: 'scatter',
-                mode: 'lines',
-                line: { color: '#3498db', width: 2 }
-            }], {
-                title: 'f(x) = x^2',
-                xaxis: { title: 'x', gridcolor: '#f0f0f0' },
-                yaxis: { title: 'f(x)', gridcolor: '#f0f0f0' },
-                plot_bgcolor: '#fafafa'
-            });
-            
-            // Обновляем свойства для x^2
-            updatePropertiesForX2();
-            
-            // Обработчики
-            btn.addEventListener('click', analyzeFunction);
-            
-            // Примеры
-            document.querySelectorAll('.example-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    input.value = this.getAttribute('data-func');
-                    analyzeFunction();
-                });
-            });
-            
-            // Enter для ввода
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') analyzeFunction();
-            });
-            
-            // Управление графиком
-            document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
-            document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
-            document.getElementById('resetViewBtn').addEventListener('click', resetView);
-            
-            // Диапазон
-            document.getElementById('xRange').addEventListener('input', function() {
-                document.getElementById('rangeValue').textContent = this.value;
-            });
-            
-            // Авто-анализ
-            setTimeout(() => {
-                analyzeFunction();
-            }, 100);
-        }
-        
-        function analyzeFunction() {
-            const input = document.getElementById('functionInput');
-            const expr = input.value.trim();
-            
-            if (!expr) {
-                showError('Введите функцию');
-                return;
-            }
-            
-            document.getElementById('currentFunction').textContent = `f(x) = ${expr}`;
-            document.getElementById('graphStatus').textContent = 'Анализ...';
-            
-            try {
-                // Компилируем функцию
-                const func = math.compile(expr);
-                
-                // Простые свойства для популярных функций
-                const props = [];
-                
-                if (expr === 'x^2') {
-                    props.push({title: 'Тип функции', value: 'Квадратичная (парабола)', icon: '📊'});
-                    props.push({title: 'Область определения', value: 'Все действительные числа', icon: '🌐'});
-                    props.push({title: 'Нули функции', value: 'x = 0', icon: '⚫'});
-                    props.push({title: 'Пересечение с OY', value: '(0, 0)', icon: '🔵'});
-                    props.push({title: 'Чётность', value: 'Чётная', icon: '🔄'});
-                    props.push({title: 'Вершина', value: '(0, 0)', icon: '📍'});
-                }
-                else if (expr === '2*x + 1') {
-                    props.push({title: 'Тип функции', value: 'Линейная', icon: '📊'});
-                    props.push({title: 'Область определения', value: 'Все действительные числа', icon: '🌐'});
-                    props.push({title: 'Нули функции', value: 'x = -0.5', icon: '⚫'});
-                    props.push({title: 'Пересечение с OY', value: '(0, 1)', icon: '🔵'});
-                    props.push({title: 'Угловой коэффициент', value: 'k = 2', icon: '📐'});
-                }
-                else if (expr === 'x^2 - 4') {
-                    props.push({title: 'Тип функции', value: 'Квадратичная', icon: '📊'});
-                    props.push({title: 'Область определения', value: 'Все действительные числа', icon: '🌐'});
-                    props.push({title: 'Нули функции', value: 'x = -2, x = 2', icon: '⚫'});
-                    props.push({title: 'Пересечение с OY', value: '(0, -4)', icon: '🔵'});
-                    props.push({title: 'Вершина', value: '(0, -4)', icon: '📍'});
-                }
-                else if (expr === 'sin(x)') {
-                    props.push({title: 'Тип функции', value: 'Тригонометрическая', icon: '📊'});
-                    props.push({title: 'Область определения', value: 'Все действительные числа', icon: '🌐'});
-                    props.push({title: 'Нули функции', value: 'x = πk, k∈ℤ', icon: '⚫'});
-                    props.push({title: 'Периодичность', value: 'T = 2π', icon: '⏱️'});
-                    props.push({title: 'Чётность', value: 'Нечётная', icon: '🔄'});
-                }
-                else if (expr === '1/x') {
-                    props.push({title: 'Тип функции', value: 'Дробно-рациональная', icon: '📊'});
-                    props.push({title: 'Область определения', value: 'x ≠ 0', icon: '🌐'});
-                    props.push({title: 'Нули функции', value: 'Нет', icon: '⚫'});
-                    props.push({title: 'Асимптоты', value: 'x=0, y=0', icon: '📏'});
-                    props.push({title: 'Чётность', value: 'Нечётная', icon: '🔄'});
-                }
-                else {
-                    props.push({title: 'Тип функции', value: 'Алгебраическая', icon: '📊'});
-                    props.push({title: 'Область определения', value: 'Все действительные числа', icon: '🌐'});
-                    props.push({title: 'Статус', value: 'Функция распознана', icon: '✅'});
-                }
-                
-                // Показываем свойства
-                showProperties(props);
-                
-                // Строим график
-                plotFunction(expr, func);
-                
-                document.getElementById('graphStatus').textContent = 'Готово';
-                
-            } catch (error) {
-                console.error('Ошибка:', error);
-                showError(`Ошибка ввода: ${error.message}`);
-            }
-        }
-        
-        function updatePropertiesForX2() {
-            const props = [
-                {title: 'Тип функции', value: 'Квадратичная (парабола)', icon: '📊'},
-                {title: 'Область определения', value: 'Все действительные числа', icon: '🌐'},
-                {title: 'Нули функции', value: 'x = 0', icon: '⚫'},
-                {title: 'Пересечение с OY', value: '(0, 0)', icon: '🔵'},
-                {title: 'Чётность', value: 'Чётная', icon: '🔄'},
-                {title: 'Вершина', value: '(0, 0)', icon: '📍'}
-            ];
-            showProperties(props);
-        }
-        
-        function showProperties(props) {
-            const container = document.getElementById('propertiesOutput');
-            
-            let html = '';
-            props.forEach(p => {
-                html += `
-                    <div class="property-item">
-                        <div class="property-icon">${p.icon}</div>
-                        <div>
-                            <div class="property-title">${p.title}</div>
-                            <div class="property-value">${p.value}</div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        function plotFunction(expr, func) {
-            try {
-                const range = parseInt(document.getElementById('xRange').value) || 10;
-                const step = 0.1;
-                
-                const x = [];
-                const y = [];
-                
-                // Генерируем точки
-                for (let i = -range; i <= range; i += step) {
-                    try {
-                        const val = func.evaluate({x: i});
-                        if (isFinite(val)) {
-                            x.push(i);
-                            y.push(val);
-                        }
-                    } catch(e) {
-                        // Разрыв
-                        x.push(i);
-                        y.push(null);
-                    }
-                }
-                
-                // Обновляем график
-                Plotly.react('plot', [{
-                    x: x,
-                    y: y,
-                    type: 'scatter',
-                    mode: 'lines',
-                    line: { color: '#3498db', width: 2 }
-                }], {
-                    title: `f(x) = ${expr}`,
-                    xaxis: { 
-                        title: 'x',
-                        range: [-range, range]
-                    },
-                    yaxis: { title: 'f(x)' }
-                });
-                
-            } catch(error) {
-                console.error('Ошибка графика:', error);
-            }
-        }
-        
-        function zoomIn() {
-            Plotly.relayout('plot', {
-                'xaxis.range[0]': '*0.8',
-                'xaxis.range[1]': '*0.8',
-                'yaxis.range[0]': '*0.8',
-                'yaxis.range[1]': '*0.8'
-            });
-        }
-        
-        function zoomOut() {
-            Plotly.relayout('plot', {
-                'xaxis.range[0]': '*1.2',
-                'xaxis.range[1]': '*1.2',
-                'yaxis.range[0]': '*1.2',
-                'yaxis.range[1]': '*1.2'
-            });
-        }
-        
-        function resetView() {
-            const range = parseInt(document.getElementById('xRange').value) || 10;
-            Plotly.relayout('plot', {
-                'xaxis.range': [-range, range],
-                'yaxis.range': [-range, range]
-            });
-        }
-        
-        function showError(msg) {
-            const container = document.getElementById('propertiesOutput');
-            container.innerHTML = `
-                <div class="error-state">
-                    <strong>Ошибка:</strong> ${msg}
-                </div>
-            `;
-        }
-        
-        // Запускаем проверку библиотек
-        window.addEventListener('load', checkLibraries);
+        });
     </script>
 </body>
-</html>
+</html> 
