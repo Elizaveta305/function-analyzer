@@ -28,7 +28,8 @@
                 <h3>🔍 Введите функцию</h3>
                 <div class="input-area">
                     <input type="text" id="functionInput" 
-                           placeholder="Например: x^2 - 3*x + 2">
+                           placeholder="Например: x^2 - 3*x + 2"
+                           value="x^2">
                     <button id="calculateBtn" class="primary-btn">Анализировать</button>
                 </div>
                 <div class="hint-box">
@@ -61,7 +62,7 @@
             <div class="properties-card">
                 <div class="card-header">
                     <h3>📊 Свойства функции</h3>
-                    <div class="function-display" id="currentFunction">f(x) = не указана</div>
+                    <div class="function-display" id="currentFunction">f(x) = x^2</div>
                 </div>
                 
                 <div id="propertiesOutput">
@@ -71,8 +72,6 @@
                         <p>Введите функцию и нажмите "Анализировать"</p>
                     </div>
                 </div>
-                
-                <!-- Список свойств будет добавляться сюда -->
             </div>
 
             <!-- График (СПРАВА) -->
@@ -80,7 +79,7 @@
                 <div class="card-header">
                     <h3>📈 График функции</h3>
                     <div class="graph-stats">
-                        <span id="graphStatus">Ожидание данных...</span>
+                        <span id="graphStatus">Готов к построению</span>
                     </div>
                 </div>
                 
@@ -160,37 +159,5 @@
 
     <!-- Наш JavaScript -->
     <script src="script.js"></script>
-    
-    <!-- Встроенный скрипт для обработки UI -->
-    <script>
-        // Обработка примеров
-        document.querySelectorAll('.example-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const func = this.getAttribute('data-func');
-                document.getElementById('functionInput').value = func;
-                document.getElementById('calculateBtn').click();
-            });
-        });
-
-        // Слайдер диапазона
-        const rangeSlider = document.getElementById('xRange');
-        const rangeValue = document.getElementById('rangeValue');
-        
-        rangeSlider.addEventListener('input', function() {
-            rangeValue.textContent = this.value;
-        });
-
-        // Enter для ввода
-        document.getElementById('functionInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                document.getElementById('calculateBtn').click();
-            }
-        });
-
-        // Инициализация при загрузке
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Анализатор функций загружен!');
-        });
-    </script>
 </body>
-</html>
+</html> 

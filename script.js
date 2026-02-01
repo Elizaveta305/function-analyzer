@@ -1,111 +1,10 @@
 // ============================================
 // АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ
 // ============================================
-// ===== ПРОВЕРКА ЗАГРУЗКИ MATH.JS =====
-if (typeof math === 'undefined') {
-    console.error('Math.js не загружена!');
-    // Перезагружаем библиотеку
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.10.1/mathjs.min.js';
-    script.onload = function() {
-        console.log('Math.js перезагружена');
-        initializeAnalyzer();
-    };
-    document.head.appendChild(script);
-} else {
-    initializeAnalyzer();
-}
 
-function initializeAnalyzer() {
-    // Весь остальной код отсюда...
-    // Глобальные переменные
-    let currentFunction = null;
-    let currentCompiledFunc = null;
-    
-    // Инициализация при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 Анализатор функций инициализирован');
-        // ... весь остальной код
-    });
-}
 // Глобальные переменные
 let currentFunction = null;
 let currentCompiledFunc = null;
-
-// Инициализация при загрузке
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Анализатор функций инициализирован');
-    
-    // Настройка обработчиков
-    setupEventHandlers();
-    
-    // Инициализация графика
-    initializePlot();
-    
-    // Авто-анализ при загрузке (опционально)
-    setTimeout(() => {
-        // Можно закомментировать, если не нужно авто-заполнение
-        // document.getElementById('functionInput').value = 'x^2 - 4';
-        // analyzeFunction();
-    }, 500);
-});
-
-// Настройка обработчиков событий
-function setupEventHandlers() {
-    // Основная кнопка анализа
-    document.getElementById('calculateBtn').addEventListener('click', analyzeFunction);
-    
-    // Управление графиком
-    document.getElementById('zoomInBtn').addEventListener('click', zoomInGraph);
-    document.getElementById('zoomOutBtn').addEventListener('click', zoomOutGraph);
-    document.getElementById('resetViewBtn').addEventListener('click', resetGraphView);
-    
-    // Слайдер диапазона
-    document.getElementById('xRange').addEventListener('change', updateGraphRange);
-    
-    // Enter в поле ввода
-    document.getElementById('functionInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') analyzeFunction();
-    });
-    
-    console.log('✅ Обработчики событий настроены');
-}
-
-// Инициализация графика
-function initializePlot() {
-    const trace = {
-        x: [],
-        y: [],
-        type: 'scatter',
-        mode: 'lines',
-        name: 'f(x)',
-        line: { color: '#3498db', width: 3 }
-    };
-    
-    const layout = {
-        title: { text: 'График функции', font: { size: 16 } },
-        xaxis: { 
-            title: 'x', 
-            gridcolor: '#f0f0f0',
-            zeroline: true,
-            zerolinecolor: '#ccc'
-        },
-        yaxis: { 
-            title: 'f(x)', 
-            gridcolor: '#f0f0f0',
-            zeroline: true,
-            zerolinecolor: '#ccc'
-        },
-        plot_bgcolor: '#ffffff',
-        paper_bgcolor: '#ffffff',
-        showlegend: false,
-        margin: { t: 50, r: 30, b: 50, l: 50 }
-    };
-    
-    Plotly.newPlot('plot', [trace], layout);
-    document.getElementById('graphStatus').textContent = 'Готов к построению';
-    console.log('✅ График инициализирован');
-}
 
 // Основная функция анализа
 function analyzeFunction() {
@@ -496,10 +395,97 @@ function updateGraphRange() {
     }
 }
 
+// Настройка обработчиков событий
+function setupEventHandlers() {
+    // Основная кнопка анализа
+    document.getElementById('calculateBtn').addEventListener('click', analyzeFunction);
+    
+    // Управление графиком
+    document.getElementById('zoomInBtn').addEventListener('click', zoomInGraph);
+    document.getElementById('zoomOutBtn').addEventListener('click', zoomOutGraph);
+    document.getElementById('resetViewBtn').addEventListener('click', resetGraphView);
+    
+    // Слайдер диапазона
+    document.getElementById('xRange').addEventListener('input', function() {
+        document.getElementById('rangeValue').textContent = this.value;
+    });
+    
+    document.getElementById('xRange').addEventListener('change', updateGraphRange);
+    
+    console.log('✅ Обработчики событий настроены');
+}
+
+// Инициализация графика
+function initializePlot() {
+    const trace = {
+        x: [],
+        y: [],
+        type: 'scatter',
+        mode: 'lines',
+        name: 'f(x)',
+        line: { color: '#3498db', width: 3 }
+    };
+    
+    const layout = {
+        title: { text: 'График функции', font: { size: 16 } },
+        xaxis: { 
+            title: 'x', 
+            gridcolor: '#f0f0f0',
+            zeroline: true,
+            zerolinecolor: '#ccc'
+        },
+        yaxis: { 
+            title: 'f(x)', 
+            gridcolor: '#f0f0f0',
+            zeroline: true,
+            zerolinecolor: '#ccc'
+        },
+        plot_bgcolor: '#ffffff',
+        paper_bgcolor: '#ffffff',
+        showlegend: false,
+        margin: { t: 50, r: 30, b: 50, l: 50 }
+    };
+    
+    Plotly.newPlot('plot', [trace], layout);
+    document.getElementById('graphStatus').textContent = 'Готов к построению';
+    console.log('✅ График инициализирован');
+}
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Анализатор функций инициализирован');
+    
+    // Проверяем загрузку библиотек
+    if (typeof math === 'undefined') {
+        console.error('Math.js не загружена!');
+        showError('Библиотека Math.js не загружена. Пожалуйста, обновите страницу.');
+        return;
+    }
+    
+    if (typeof Plotly === 'undefined') {
+        console.error('Plotly не загружена!');
+        showError('Библиотека Plotly не загружена. Пожалуйста, обновите страницу.');
+        return;
+    }
+    
+    // Настройка обработчиков
+    setupEventHandlers();
+    
+    // Инициализация графика
+    initializePlot();
+    
+    // Авто-анализ при загрузке (опционально)
+    setTimeout(() => {
+        // Можно закомментировать, если не нужно авто-заполнение
+        // document.getElementById('functionInput').value = 'x^2 - 4';
+        // analyzeFunction();
+    }, 500);
+});
+
 // Экспорт для отладки
 window.FunctionAnalyzer = {
     analyze: analyzeFunction,
     getCurrentFunction: () => currentFunction
-};
+}; 
 
-console.log('✅ Анализатор функций готов к работе!'); 
+console.log('✅ Анализатор функций готов к работе!');
