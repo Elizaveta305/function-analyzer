@@ -502,4 +502,4 @@ window.FunctionAnalyzer = {
     getCurrentFunction: () => currentFunction
 };
 
-console.log('✅ Анализатор функций готов к работе!');
+console.log('✅ Анализатор функций готов к работе!'); 
