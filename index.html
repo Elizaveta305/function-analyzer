@@ -5,91 +5,169 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Анализатор математических функций</title>
     
-    <!-- Подключаем библиотеки -->
+    <!-- Библиотеки -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.10.1/mathjs.min.js"></script>
     
-    <!-- Подключаем наши стили -->
+    <!-- Стили -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <!-- Заголовок -->
         <header>
-            <h1>🧮 Анализатор математических функций</h1>
-            <p class="subtitle">Введите функцию и получите её свойства с графиком</p>
+            <div class="header-content">
+                <h1>🧮 Анализатор математических функций</h1>
+                <p class="subtitle">Интерактивный инструмент для анализа и построения графиков</p>
+            </div>
         </header>
 
         <!-- Область ввода -->
         <div class="input-section">
-            <div class="input-area">
-                <input type="text" id="functionInput" 
-                       placeholder="Например: x^2 - 4*x + 3">
-                <button id="calculateBtn">Анализировать</button>
-            </div>
-            <p class="hint">Используйте: * для умножения, ^ для степени, sin(x), cos(x), log(x), exp(x)</p>
-            <div class="examples">
-                <p>Примеры: 
-                    <span class="example" data-func="x^2">x²</span>, 
-                    <span class="example" data-func="x^3 - 3*x">x³-3x</span>, 
-                    <span class="example" data-func="sin(x)">sin(x)</span>, 
-                    <span class="example" data-func="1/x">1/x</span>, 
-                    <span class="example" data-func="exp(x)">eˣ</span>
-                </p>
-            </div>
-        </div>
-
-        <!-- Основная область: График + Свойства -->
-        <div class="main-content">
-            <!-- График -->
-            <div class="graph-section">
-                <h3>📈 График функции</h3>
-                <div id="plot"></div>
-                <div class="graph-controls">
-                    <button id="zoomInBtn">+ Увеличить</button>
-                    <button id="zoomOutBtn">- Уменьшить</button>
-                    <button id="resetViewBtn">⟲ Сбросить</button>
-                    <div class="range-control">
-                        <span>Диапазон X:</span>
-                        <input type="range" id="xRange" min="1" max="20" value="10">
-                        <span>±<span id="rangeValue">10</span></span>
+            <div class="input-card">
+                <h3>🔍 Введите функцию</h3>
+                <div class="input-area">
+                    <input type="text" id="functionInput" 
+                           placeholder="Например: x^2 - 3*x + 2">
+                    <button id="calculateBtn" class="primary-btn">Анализировать</button>
+                </div>
+                <div class="hint-box">
+                    <p><strong>📝 Как вводить:</strong></p>
+                    <ul>
+                        <li><code>2*x + 3</code> — умножение</li>
+                        <li><code>x^2</code> — степень</li>
+                        <li><code>sin(x)</code>, <code>cos(x)</code> — тригонометрия</li>
+                        <li><code>log(x)</code>, <code>exp(x)</code> — логарифмы и экспоненты</li>
+                    </ul>
+                </div>
+                
+                <div class="quick-examples">
+                    <p><strong>⚡ Быстрые примеры:</strong></p>
+                    <div class="example-buttons">
+                        <button class="example-btn" data-func="x^2">x²</button>
+                        <button class="example-btn" data-func="x^3 - 3*x">x³-3x</button>
+                        <button class="example-btn" data-func="sin(x)">sin(x)</button>
+                        <button class="example-btn" data-func="1/x">1/x</button>
+                        <button class="example-btn" data-func="exp(x)">eˣ</button>
+                        <button class="example-btn" data-func="log(x)">ln(x)</button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Свойства функции -->
-            <div class="properties-section">
-                <h3>📊 Свойства функции</h3>
+        <!-- Основной контент: СВОЙСТВА слева, ГРАФИК справа -->
+        <div class="main-content">
+            <!-- Свойства функции (СЛЕВА) -->
+            <div class="properties-card">
+                <div class="card-header">
+                    <h3>📊 Свойства функции</h3>
+                    <div class="function-display" id="currentFunction">f(x) = не указана</div>
+                </div>
+                
                 <div id="propertiesOutput">
                     <div class="empty-state">
-                        <p>Функция не проанализирована.</p>
-                        <p>Введите функцию в поле выше и нажмите "Анализировать".</p>
+                        <div class="empty-icon">📈</div>
+                        <p>Функция не проанализирована</p>
+                        <p>Введите функцию и нажмите "Анализировать"</p>
                     </div>
+                </div>
+                
+                <!-- Список свойств будет добавляться сюда -->
+            </div>
+
+            <!-- График (СПРАВА) -->
+            <div class="graph-card">
+                <div class="card-header">
+                    <h3>📈 График функции</h3>
+                    <div class="graph-stats">
+                        <span id="graphStatus">Ожидание данных...</span>
+                    </div>
+                </div>
+                
+                <div id="plot" class="plot-container"></div>
+                
+                <div class="graph-controls">
+                    <div class="control-group">
+                        <label>Диапазон по X:</label>
+                        <input type="range" id="xRange" min="1" max="20" value="10" class="range-slider">
+                        <span class="range-value">±<span id="rangeValue">10</span></span>
+                    </div>
+                    
+                    <div class="control-buttons">
+                        <button id="zoomInBtn" class="control-btn">➕ Увеличить</button>
+                        <button id="zoomOutBtn" class="control-btn">➖ Уменьшить</button>
+                        <button id="resetViewBtn" class="control-btn">🔄 Сбросить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Информация о возможностях -->
+        <div class="capabilities-section">
+            <h3>✨ Возможности анализатора</h3>
+            <div class="capabilities-grid">
+                <div class="capability">
+                    <div class="capability-icon">🔍</div>
+                    <h4>Определение типа</h4>
+                    <p>Линейные, квадратичные, тригонометрические, показательные и другие функции</p>
+                </div>
+                <div class="capability">
+                    <div class="capability-icon">📐</div>
+                    <h4>Основные свойства</h4>
+                    <p>Область определения, нули функции, чётность, пересечения с осями</p>
+                </div>
+                <div class="capability">
+                    <div class="capability-icon">📈</div>
+                    <h4>Точные графики</h4>
+                    <p>Интерактивные графики с масштабированием и детальным отображением</p>
+                </div>
+                <div class="capability">
+                    <div class="capability-icon">⚡</div>
+                    <h4>Быстрый анализ</h4>
+                    <p>Мгновенный расчёт свойств и построение графиков</p>
                 </div>
             </div>
         </div>
 
         <!-- Техническая информация -->
-        <div class="tech-info">
+        <div class="tech-section">
             <h3>⚙️ Техническая информация</h3>
-            <p><strong>Используемые технологии:</strong> HTML5, CSS3, JavaScript, Plotly.js, Math.js</p>
-            <p><strong>Исходный код:</strong> <a href="https://github.com/elizaveta305/function-analyzer" target="_blank">GitHub репозиторий</a></p>
+            <div class="tech-details">
+                <div class="tech-item">
+                    <strong>Технологии:</strong> HTML5, CSS3, JavaScript
+                </div>
+                <div class="tech-item">
+                    <strong>Библиотеки:</strong> Plotly.js (графики), Math.js (вычисления)
+                </div>
+                <div class="tech-item">
+                    <strong>Хостинг:</strong> GitHub Pages
+                </div>
+                <div class="tech-item">
+                    <strong>Исходный код:</strong> 
+                    <a href="https://github.com/elizaveta305/function-analyzer" target="_blank">GitHub репозиторий</a>
+                </div>
+            </div>
         </div>
 
         <!-- Подвал -->
         <footer>
-            <p>© 2026 Анализатор математических функций</p>
+            <div class="footer-content">
+                <p>© 2026 Анализатор математических функций</p>
+                <p class="footer-note">Проект создан для анализа математических функций</p>
+            </div>
         </footer>
     </div>
 
     <!-- Наш JavaScript -->
     <script src="script.js"></script>
     
+    <!-- Встроенный скрипт для обработки UI -->
     <script>
         // Обработка примеров
-        document.querySelectorAll('.example').forEach(el => {
-            el.addEventListener('click', function() {
-                document.getElementById('functionInput').value = this.getAttribute('data-func');
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const func = this.getAttribute('data-func');
+                document.getElementById('functionInput').value = func;
                 document.getElementById('calculateBtn').click();
             });
         });
@@ -102,16 +180,17 @@
             rangeValue.textContent = this.value;
         });
 
-        rangeSlider.addEventListener('change', function() {
-            if (window.currentFunction) {
-                plotFunction(window.currentFunction);
+        // Enter для ввода
+        document.getElementById('functionInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('calculateBtn').click();
             }
         });
 
-        // Enter для ввода
-        document.getElementById('functionInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') document.getElementById('calculateBtn').click();
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Анализатор функций загружен!');
         });
     </script>
 </body>
-</html>
+</html> 
