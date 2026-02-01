@@ -1,4 +1,3 @@
-/* Базовые стили */
 * {
     margin: 0;
     padding: 0;
@@ -9,7 +8,6 @@ body {
     font-family: Arial, sans-serif;
     background: #f0f8ff;
     padding: 20px;
-    min-height: 100vh;
 }
 
 .container {
@@ -17,8 +15,8 @@ body {
     margin: 0 auto;
     background: white;
     border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     padding: 30px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
 /* Заголовок */
@@ -29,22 +27,16 @@ header {
 
 h1 {
     color: #2c3e50;
-    margin-bottom: 10px;
-    font-size: 2.2em;
+    font-size: 2.5em;
 }
 
-.subtitle {
-    color: #7f8c8d;
-    font-size: 1.1em;
-}
-
-/* Область ввода - СВЕТЛО-ГОЛУБОЙ ФОН */
+/* Область ввода */
 .input-section {
     margin-bottom: 30px;
 }
 
 .input-card {
-    background: #e6f2ff;  /* Светло-голубой! */
+    background: #e6f2ff;
     padding: 25px;
     border-radius: 10px;
     border: 1px solid #cce5ff;
@@ -69,11 +61,6 @@ h1 {
     font-size: 16px;
 }
 
-#functionInput:focus {
-    outline: none;
-    border-color: #3399ff;
-}
-
 .primary-btn {
     padding: 12px 25px;
     background: #0066cc;
@@ -82,14 +69,12 @@ h1 {
     border-radius: 5px;
     cursor: pointer;
     font-size: 16px;
-    font-weight: bold;
 }
 
 .primary-btn:hover {
     background: #0052a3;
 }
 
-/* Подсказки */
 .hint-box {
     background: rgba(255,255,255,0.7);
     padding: 15px;
@@ -98,7 +83,6 @@ h1 {
     font-size: 14px;
 }
 
-/* Примеры */
 .quick-examples {
     margin-top: 20px;
 }
@@ -143,7 +127,6 @@ h1 {
     border: 1px solid #ddd;
     border-radius: 10px;
     padding: 20px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
 }
 
 .card-header {
@@ -153,10 +136,6 @@ h1 {
     margin-bottom: 20px;
     padding-bottom: 15px;
     border-bottom: 2px solid #f0f0f0;
-}
-
-.card-header h3 {
-    color: #2c3e50;
 }
 
 .function-display {
@@ -206,10 +185,6 @@ h1 {
     cursor: pointer;
 }
 
-.control-buttons button:hover {
-    background: #d5dbdb;
-}
-
 /* Свойства */
 .empty-state {
     text-align: center;
@@ -223,7 +198,6 @@ h1 {
     opacity: 0.5;
 }
 
-/* Элементы свойств */
 .property-item {
     display: flex;
     gap: 15px;
@@ -247,15 +221,8 @@ h1 {
 .property-value {
     color: #e74c3c;
     font-weight: bold;
-    margin-bottom: 5px;
 }
 
-.property-description {
-    color: #7f8c8d;
-    font-size: 0.9em;
-}
-
-/* Ошибка */
 .error-state {
     background: #ffe6e6;
     border-left: 4px solid #e74c3c;
@@ -264,11 +231,45 @@ h1 {
     color: #c0392b;
 }
 
+/* Техническая информация */
+.tech-section {
+    background: #2c3e50;
+    color: white;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+.tech-section h3 {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.tech-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.tech-item {
+    padding: 15px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 5px;
+}
+
+.tech-item a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.tech-item a:hover {
+    text-decoration: underline;
+}
+
 /* Подвал */
 footer {
     text-align: center;
     padding-top: 20px;
     border-top: 1px solid #eee;
     color: #7f8c8d;
-    font-size: 14px;
 }
