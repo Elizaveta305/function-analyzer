@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Анализатор математических функций</title>
     
-    <!-- Библиотеки -->
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.10.1/mathjs.min.js"></script>
-    
     <!-- Стили -->
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Библиотеки -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.10.1/mathjs.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -71,8 +71,6 @@
                         <p>Введите функцию и нажмите "Анализировать"</p>
                     </div>
                 </div>
-                
-                <!-- Список свойств будет добавляться сюда -->
             </div>
 
             <!-- График (СПРАВА) -->
@@ -186,11 +184,6 @@
                 document.getElementById('calculateBtn').click();
             }
         });
-
-        // Инициализация при загрузке
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Анализатор функций загружен!');
-        });
     </script>
 </body>
-</html> 
+</html>

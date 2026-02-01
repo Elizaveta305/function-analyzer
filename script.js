@@ -1,7 +1,33 @@
 // ============================================
 // АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ
 // ============================================
+// ===== ПРОВЕРКА ЗАГРУЗКИ MATH.JS =====
+if (typeof math === 'undefined') {
+    console.error('Math.js не загружена!');
+    // Перезагружаем библиотеку
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.10.1/mathjs.min.js';
+    script.onload = function() {
+        console.log('Math.js перезагружена');
+        initializeAnalyzer();
+    };
+    document.head.appendChild(script);
+} else {
+    initializeAnalyzer();
+}
 
+function initializeAnalyzer() {
+    // Весь остальной код отсюда...
+    // Глобальные переменные
+    let currentFunction = null;
+    let currentCompiledFunc = null;
+    
+    // Инициализация при загрузке
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Анализатор функций инициализирован');
+        // ... весь остальной код
+    });
+}
 // Глобальные переменные
 let currentFunction = null;
 let currentCompiledFunc = null;
