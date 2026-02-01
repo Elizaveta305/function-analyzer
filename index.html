@@ -16,7 +16,7 @@
     <div class="container">
         <!-- Заголовок -->
         <header>
-            <h1>Анализатор математических функций</h1>
+            <h1>🧮 Анализатор математических функций</h1>
             <p class="subtitle">Введите функцию и получите её свойства с графиком</p>
         </header>
 
@@ -24,9 +24,10 @@
         <div class="input-section">
             <div class="input-area">
                 <input type="text" id="functionInput" 
-                       placeholder="Например: x^2 - 4*x + 3 или sin(x) или 1/(x-2)">
+                       placeholder="Например: x^2 - 4*x + 3">
                 <button id="calculateBtn">Анализировать</button>
             </div>
+            <p class="hint">Используйте: * для умножения, ^ для степени, sin(x), cos(x), log(x), exp(x)</p>
             <div class="examples">
                 <p>Примеры: 
                     <span class="example" data-func="x^2">x²</span>, 
@@ -42,20 +43,23 @@
         <div class="main-content">
             <!-- График -->
             <div class="graph-section">
-                <h3>График функции</h3>
+                <h3>📈 График функции</h3>
                 <div id="plot"></div>
                 <div class="graph-controls">
-                    <button id="zoomInBtn">+</button>
-                    <button id="zoomOutBtn">-</button>
-                    <button id="resetViewBtn">⟲</button>
-                    <input type="range" id="xRange" min="1" max="20" value="10">
-                    <span>Диапазон: ±<span id="rangeValue">10</span></span>
+                    <button id="zoomInBtn">+ Увеличить</button>
+                    <button id="zoomOutBtn">- Уменьшить</button>
+                    <button id="resetViewBtn">⟲ Сбросить</button>
+                    <div class="range-control">
+                        <span>Диапазон X:</span>
+                        <input type="range" id="xRange" min="1" max="20" value="10">
+                        <span>±<span id="rangeValue">10</span></span>
+                    </div>
                 </div>
             </div>
 
             <!-- Свойства функции -->
             <div class="properties-section">
-                <h3>Свойства функции</h3>
+                <h3>📊 Свойства функции</h3>
                 <div id="propertiesOutput">
                     <div class="empty-state">
                         <p>Функция не проанализирована.</p>
@@ -65,9 +69,16 @@
             </div>
         </div>
 
+        <!-- Техническая информация -->
+        <div class="tech-info">
+            <h3>⚙️ Техническая информация</h3>
+            <p><strong>Используемые технологии:</strong> HTML5, CSS3, JavaScript, Plotly.js, Math.js</p>
+            <p><strong>Исходный код:</strong> <a href="https://github.com/elizaveta305/function-analyzer" target="_blank">GitHub репозиторий</a></p>
+        </div>
+
         <!-- Подвал -->
         <footer>
-            <p>© 2024 Анализатор функций | Использует Plotly.js и Math.js</p>
+            <p>© 2026 Анализатор математических функций</p>
         </footer>
     </div>
 
@@ -84,8 +95,17 @@
         });
 
         // Слайдер диапазона
-        document.getElementById('xRange').addEventListener('input', function() {
-            document.getElementById('rangeValue').textContent = this.value;
+        const rangeSlider = document.getElementById('xRange');
+        const rangeValue = document.getElementById('rangeValue');
+        
+        rangeSlider.addEventListener('input', function() {
+            rangeValue.textContent = this.value;
+        });
+
+        rangeSlider.addEventListener('change', function() {
+            if (window.currentFunction) {
+                plotFunction(window.currentFunction);
+            }
         });
 
         // Enter для ввода

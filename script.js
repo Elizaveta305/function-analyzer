@@ -1,3 +1,7 @@
+// ===== ИСПРАВЛЕНИЕ ОШИБКИ math is not defined =====
+// Добавь эту строку в самое начало файла!
+const math = window.math || {};
+
 // Глобальные переменные
 let currentFunction = null;
 let currentCompiledFunc = null;
