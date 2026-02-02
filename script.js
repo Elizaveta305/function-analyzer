@@ -1,6 +1,6 @@
 // ============================================
 // АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ
-// Автономная версия БЕЗ Math.js
+// Исправленная версия
 // ============================================
 
 // Глобальные переменные
@@ -11,17 +11,17 @@ function parseFunction(expr) {
     // Сохраняем исходное выражение для отображения
     const displayExpr = expr;
     
-    // Подготовка выражения для eval
-    expr = expr
-        .replace(/\s+/g, '') // Убираем пробелы
-        .replace(/\^/g, '**') // ^ заменяем на **
-        .toLowerCase();
-    
     return {
         evaluate: function(x) {
             try {
-                // Заменяем x на значение и математические функции
+                // Подготовка выражения
                 let evalExpr = expr
+                    .replace(/\s+/g, '') // Убираем пробелы
+                    .replace(/\^/g, '**') // ^ заменяем на **
+                    .toLowerCase();
+                
+                // Заменяем математические функции и переменную x
+                evalExpr = evalExpr
                     .replace(/x/g, `(${x})`)
                     .replace(/sin\(/g, 'Math.sin(')
                     .replace(/cos\(/g, 'Math.cos(')
@@ -31,12 +31,26 @@ function parseFunction(expr) {
                     .replace(/exp\(/g, 'Math.exp(')
                     .replace(/sqrt\(/g, 'Math.sqrt(')
                     .replace(/pi/g, 'Math.PI')
+                    .replace(/e\*\*x/g, 'Math.exp(x)') // Обработка e^x
                     .replace(/e/g, 'Math.E');
                 
+                // Обработка неявного умножения: 2x -> 2*x, x2 -> x*2
+                evalExpr = evalExpr
+                    .replace(/(\d)([a-z\(])/g, '$1*$2')
+                    .replace(/([a-z\)])(\d)/g, '$1*$2')
+                    .replace(/([a-z\)])\(/g, '$1*(');
+                
                 // Безопасная оценка
-                return eval(evalExpr);
+                const result = eval(evalExpr);
+                
+                // Проверка на бесконечность
+                if (!isFinite(result)) {
+                    return null;
+                }
+                
+                return result;
             } catch(e) {
-                console.error('Ошибка вычисления:', e);
+                console.error('Ошибка вычисления:', e, 'для выражения:', expr);
                 return null;
             }
         },
@@ -56,12 +70,6 @@ function analyzeFunction() {
         return;
     }
     
-    // Автоматически заменяем ^ на ** если пользователь забыл
-    if (expr.includes('^') && !expr.includes('**')) {
-        expr = expr.replace(/\^/g, '**');
-        input.value = expr;
-    }
-    
     // Показываем загрузку
     showLoading();
     
@@ -69,9 +77,19 @@ function analyzeFunction() {
         // Создаем функцию
         const func = parseFunction(expr);
         
-        // Тестируем функцию в точке x=1
-        const testResult = func.evaluate(1);
-        if (testResult === null || !isFinite(testResult)) {
+        // Тестируем функцию в нескольких точках
+        let testPassed = false;
+        const testPoints = [-2, -1, 0, 1, 2];
+        
+        for (const point of testPoints) {
+            const result = func.evaluate(point);
+            if (result !== null && isFinite(result)) {
+                testPassed = true;
+                break;
+            }
+        }
+        
+        if (!testPassed) {
             throw new Error('Неверное математическое выражение');
         }
         
@@ -122,30 +140,8 @@ function analyzeFunctionProperties(expr, func) {
         description: 'Множество допустимых значений x'
     });
     
-    // 3. Нули функции (упрощенный поиск)
-    const zeros = [];
-    try {
-        // Простые случаи
-        if (expr === 'x**2' || expr === 'x^2') zeros.push('0');
-        else if (expr === 'x**2 - 4' || expr === 'x^2 - 4') zeros.push('-2', '2');
-        else if (expr === 'x**3' || expr === 'x^3') zeros.push('0');
-        else if (expr === '2*x + 1') zeros.push('-0.5');
-        else {
-            // Численный поиск для других функций
-            for (let x = -10; x <= 10; x += 0.5) {
-                const y1 = func.evaluate(x);
-                const y2 = func.evaluate(x + 0.5);
-                
-                if (y1 !== null && y2 !== null && y1 * y2 <= 0) {
-                    const zero = ((x + x + 0.5) / 2).toFixed(2);
-                    if (!zeros.includes(zero)) zeros.push(zero);
-                }
-            }
-        }
-    } catch(e) {
-        // Игнорируем ошибки
-    }
-    
+    // 3. Нули функции
+    const zeros = findFunctionZeros(func, expr);
     properties.push({
         title: 'Нули функции',
         value: zeros.length > 0 ? zeros.join(', ') : 'Нет действительных нулей',
@@ -168,34 +164,8 @@ function analyzeFunctionProperties(expr, func) {
         // Игнорируем ошибку
     }
     
-    // 5. Чётность (упрощенная проверка)
-    let parity = { result: 'Не определена', description: 'Невозможно определить' };
-    try {
-        const at1 = func.evaluate(1);
-        const atMinus1 = func.evaluate(-1);
-        
-        if (at1 !== null && atMinus1 !== null) {
-            if (Math.abs(at1 - atMinus1) < 0.01) {
-                parity = {
-                    result: 'Чётная',
-                    description: 'f(-x) = f(x), симметрия относительно OY'
-                };
-            } else if (Math.abs(at1 + atMinus1) < 0.01) {
-                parity = {
-                    result: 'Нечётная',
-                    description: 'f(-x) = -f(x), симметрия относительно начала координат'
-                };
-            } else {
-                parity = {
-                    result: 'Общего вида',
-                    description: 'Ни чётная, ни нечётная'
-                };
-            }
-        }
-    } catch(e) {
-        // Оставляем значение по умолчанию
-    }
-    
+    // 5. Чётность
+    const parity = checkFunctionParity(func);
     properties.push({
         title: 'Чётность функции',
         value: parity.result,
@@ -204,21 +174,31 @@ function analyzeFunctionProperties(expr, func) {
     });
     
     // 6. Специальные свойства
-    if (expr.includes('sin') || expr.includes('cos') || expr.includes('tan')) {
+    const exprLower = expr.toLowerCase();
+    if (exprLower.includes('sin') || exprLower.includes('cos')) {
         properties.push({
             title: 'Периодичность',
             value: 'Периодическая',
             icon: '⏱️',
-            description: expr.includes('tan') ? 'Период π' : 'Период 2π'
+            description: 'Период 2π'
         });
     }
     
-    if (expr.includes('/x')) {
+    if (exprLower.includes('tan')) {
+        properties.push({
+            title: 'Периодичность',
+            value: 'Периодическая',
+            icon: '⏱️',
+            description: 'Период π'
+        });
+    }
+    
+    if (exprLower.includes('/x') || exprLower.match(/\/\(.*x.*\)/)) {
         properties.push({
             title: 'Особые точки',
             value: 'x = 0',
             icon: '⚠️',
-            description: 'Вертикальная асимптота при x = 0'
+            description: 'Вертикальная асимптота'
         });
     }
     
@@ -227,34 +207,122 @@ function analyzeFunctionProperties(expr, func) {
 
 // Определение типа функции
 function determineFunctionType(expr) {
-    expr = expr.toLowerCase();
+    const cleanExpr = expr.toLowerCase();
     
-    if (expr.includes('x**2') || expr.includes('x^2')) return 'Квадратичная (парабола)';
-    if (expr.includes('x**3') || expr.includes('x^3')) return 'Кубическая';
-    if (expr.includes('sin') || expr.includes('cos') || expr.includes('tan')) return 'Тригонометрическая';
-    if (expr.includes('exp')) return 'Показательная';
-    if (expr.includes('log')) return 'Логарифмическая';
-    if (expr.includes('/x')) return 'Дробно-рациональная';
-    if (expr.match(/[0-9]+\*x|x\*[0-9]+/)) return 'Линейная';
+    if (cleanExpr.includes('x**2') || cleanExpr.includes('x^2')) return 'Квадратичная (парабола)';
+    if (cleanExpr.includes('x**3') || cleanExpr.includes('x^3')) return 'Кубическая';
+    if (cleanExpr.includes('sin') || cleanExpr.includes('cos') || cleanExpr.includes('tan')) return 'Тригонометрическая';
+    if (cleanExpr.includes('exp') || cleanExpr.includes('e**x')) return 'Показательная';
+    if (cleanExpr.includes('log') || cleanExpr.includes('ln')) return 'Логарифмическая';
+    if (cleanExpr.includes('/x')) return 'Дробно-рациональная';
+    if (cleanExpr.match(/[0-9]+\*x|x\*[0-9]+/)) return 'Линейная';
     
     return 'Алгебраическая функция';
 }
 
 // Определение области определения
 function getFunctionDomain(expr) {
-    expr = expr.toLowerCase();
+    const cleanExpr = expr.toLowerCase();
     
-    if (expr.includes('/x')) {
+    if (cleanExpr.includes('/x') || cleanExpr.match(/\/\(.*x.*\)/)) {
         return '(-∞, 0) ∪ (0, +∞)';
     }
-    if (expr.includes('log')) {
+    if (cleanExpr.includes('log')) {
         return '(0, +∞)';
     }
-    if (expr.includes('sqrt')) {
+    if (cleanExpr.includes('ln')) {
+        return '(0, +∞)';
+    }
+    if (cleanExpr.includes('sqrt')) {
         return '[0, +∞)';
     }
     
     return '(-∞, +∞)';
+}
+
+// Поиск нулей функции
+function findFunctionZeros(func, expr) {
+    const zeros = [];
+    
+    // Простые известные случаи
+    const simpleCases = {
+        'x': ['0'],
+        'x**2': ['0'],
+        'x^2': ['0'],
+        'x**2-4': ['-2', '2'],
+        'x^2-4': ['-2', '2'],
+        'x**3': ['0'],
+        'x^3': ['0'],
+        '2*x+1': ['-0.5'],
+        '2x+1': ['-0.5'],
+        'x-1': ['1'],
+        'x+1': ['-1']
+    };
+    
+    const cleanExpr = expr.replace(/\s+/g, '').toLowerCase();
+    if (simpleCases[cleanExpr]) {
+        return simpleCases[cleanExpr];
+    }
+    
+    // Численный поиск нулей
+    const step = 0.5;
+    for (let x = -10; x <= 10; x += step) {
+        try {
+            const y1 = func.evaluate(x);
+            const y2 = func.evaluate(x + step);
+            
+            if (y1 !== null && y2 !== null && y1 * y2 <= 0) {
+                // Линейная интерполяция для более точного нахождения нуля
+                const zero = (x - y1 * (step / (y2 - y1))).toFixed(2);
+                if (!zeros.includes(zero)) {
+                    zeros.push(zero);
+                }
+            }
+        } catch(e) {
+            // Пропускаем точки, где функция не определена
+        }
+    }
+    
+    return zeros.slice(0, 5); // Возвращаем не более 5 нулей
+}
+
+// Проверка чётности
+function checkFunctionParity(func) {
+    try {
+        const at1 = func.evaluate(1);
+        const atMinus1 = func.evaluate(-1);
+        
+        if (at1 === null || atMinus1 === null) {
+            return {
+                result: 'Не определена',
+                description: 'Невозможно определить'
+            };
+        }
+        
+        if (Math.abs(at1 - atMinus1) < 0.01) {
+            return {
+                result: 'Чётная',
+                description: 'f(-x) = f(x), симметрия относительно OY'
+            };
+        }
+        
+        if (Math.abs(at1 + atMinus1) < 0.01) {
+            return {
+                result: 'Нечётная',
+                description: 'f(-x) = -f(x), симметрия относительно начала координат'
+            };
+        }
+        
+        return {
+            result: 'Общего вида',
+            description: 'Ни чётная, ни нечётная'
+        };
+    } catch(e) {
+        return {
+            result: 'Не определена',
+            description: 'Невозможно определить'
+        };
+    }
 }
 
 // Построение графика
@@ -270,13 +338,19 @@ function plotFunction(func, expr) {
         for (let x = -range; x <= range; x += step) {
             const y = func.evaluate(x);
             
-            if (y !== null && isFinite(y) && Math.abs(y) < 1000) {
+            if (y !== null && isFinite(y)) {
                 xValues.push(x);
                 yValues.push(y);
             } else {
                 xValues.push(x);
                 yValues.push(null);
             }
+        }
+        
+        // Проверяем, есть ли данные для построения
+        const validPoints = yValues.filter(y => y !== null).length;
+        if (validPoints === 0) {
+            throw new Error('Нет данных для построения графика');
         }
         
         // Создание графика
@@ -289,7 +363,8 @@ function plotFunction(func, expr) {
             line: {
                 color: '#3498db',
                 width: 3
-            }
+            },
+            connectgaps: false
         };
         
         // Обновление layout
@@ -298,11 +373,13 @@ function plotFunction(func, expr) {
             xaxis: { 
                 title: 'x',
                 range: [-range, range],
-                gridcolor: '#f0f0f0'
+                gridcolor: '#f0f0f0',
+                zeroline: true
             },
             yaxis: { 
                 title: 'f(x)',
-                gridcolor: '#f0f0f0'
+                gridcolor: '#f0f0f0',
+                zeroline: true
             },
             plot_bgcolor: '#ffffff',
             paper_bgcolor: '#ffffff',
@@ -313,13 +390,24 @@ function plotFunction(func, expr) {
         
     } catch(error) {
         console.error('Ошибка построения графика:', error);
-        showError('Не удалось построить график');
+        showError('Не удалось построить график. Проверьте функцию.');
     }
 }
 
 // Обновление отображения свойств
 function updatePropertiesDisplay(properties) {
     const container = document.getElementById('propertiesOutput');
+    
+    if (properties.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📊</div>
+                <p>Не удалось проанализировать свойства</p>
+                <p>Функция может быть слишком сложной</p>
+            </div>
+        `;
+        return;
+    }
     
     let html = '';
     properties.forEach(prop => {
@@ -358,7 +446,7 @@ function showError(message) {
             <div class="error-content">
                 <div class="error-title">Ошибка</div>
                 <div class="error-message">${message}</div>
-                <div class="error-hint">Проверьте правильность ввода функции</div>
+                <div class="error-hint">Примеры: x**2, sin(x), exp(x), 2*x+1</div>
             </div>
         </div>
     `;
@@ -503,3 +591,9 @@ if (document.readyState === 'loading') {
 } else {
     initApp();
 }
+
+// Экспорт для отладки
+window.FunctionAnalyzer = {
+    analyze: analyzeFunction,
+    parseFunction: parseFunction
+};
