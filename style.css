@@ -583,3 +583,34 @@ footer {
         max-width: 100%;
     }
 } 
+.input-card {
+    background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+    padding: 30px;
+    border-radius: 12px;
+    color: #2c3e50;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Обновленные примеры быстрых кнопок */
+.example-buttons button {
+    background: rgba(255, 255, 255, 0.9);
+    color: #2c3e50;
+    border: 1px solid #4fc3f7;
+}
+
+.example-buttons button:hover {
+    background: white;
+    border-color: #0288d1;
+}
+
+/* Улучшенный hint-box */
+.hint-box {
+    background: rgba(255, 255, 255, 0.9);
+    color: #2c3e50;
+    border: 1px solid #4fc3f7;
+}
+
+.hint-box code {
+    background: #e1f5fe;
+    color: #0277bd;
+}
