@@ -6,8 +6,30 @@
 let currentFunction = null;
 let currentCompiledFunc = null;
 
+// Проверка загрузки библиотек
+function checkLibraries() {
+    if (typeof math === 'undefined') {
+        console.error('Math.js не загружена!');
+        return false;
+    }
+    
+    if (typeof Plotly === 'undefined') {
+        console.error('Plotly не загружена!');
+        return false;
+    }
+    
+    console.log('✅ Все библиотеки загружены');
+    return true;
+}
+
 // Основная функция анализа
 function analyzeFunction() {
+    // Проверяем библиотеки перед анализом
+    if (!checkLibraries()) {
+        showError('Библиотеки не загружены. Обновите страницу.');
+        return;
+    }
+    
     const input = document.getElementById('functionInput');
     const expr = input.value.trim();
     
@@ -398,19 +420,50 @@ function updateGraphRange() {
 // Настройка обработчиков событий
 function setupEventHandlers() {
     // Основная кнопка анализа
-    document.getElementById('calculateBtn').addEventListener('click', analyzeFunction);
+    const calculateBtn = document.getElementById('calculateBtn');
+    if (calculateBtn) {
+        calculateBtn.addEventListener('click', analyzeFunction);
+    }
     
     // Управление графиком
-    document.getElementById('zoomInBtn').addEventListener('click', zoomInGraph);
-    document.getElementById('zoomOutBtn').addEventListener('click', zoomOutGraph);
-    document.getElementById('resetViewBtn').addEventListener('click', resetGraphView);
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const resetViewBtn = document.getElementById('resetViewBtn');
+    
+    if (zoomInBtn) zoomInBtn.addEventListener('click', zoomInGraph);
+    if (zoomOutBtn) zoomOutBtn.addEventListener('click', zoomOutGraph);
+    if (resetViewBtn) resetViewBtn.addEventListener('click', resetGraphView);
     
     // Слайдер диапазона
-    document.getElementById('xRange').addEventListener('input', function() {
-        document.getElementById('rangeValue').textContent = this.value;
+    const xRangeSlider = document.getElementById('xRange');
+    const rangeValue = document.getElementById('rangeValue');
+    
+    if (xRangeSlider && rangeValue) {
+        xRangeSlider.addEventListener('input', function() {
+            rangeValue.textContent = this.value;
+        });
+        
+        xRangeSlider.addEventListener('change', updateGraphRange);
+    }
+    
+    // Примеры быстрых функций
+    document.querySelectorAll('.example-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const func = this.getAttribute('data-func');
+            document.getElementById('functionInput').value = func;
+            analyzeFunction();
+        });
     });
     
-    document.getElementById('xRange').addEventListener('change', updateGraphRange);
+    // Enter в поле ввода
+    const functionInput = document.getElementById('functionInput');
+    if (functionInput) {
+        functionInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                analyzeFunction();
+            }
+        });
+    }
     
     console.log('✅ Обработчики событий настроены');
 }
@@ -452,40 +505,40 @@ function initializePlot() {
 }
 
 // Инициализация при загрузке
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Анализатор функций инициализирован');
+function initApp() {
+    console.log('🚀 Анализатор функций инициализируется...');
     
-    // Проверяем загрузку библиотек
-    if (typeof math === 'undefined') {
-        console.error('Math.js не загружена!');
-        showError('Библиотека Math.js не загружена. Пожалуйста, обновите страницу.');
-        return;
-    }
-    
-    if (typeof Plotly === 'undefined') {
-        console.error('Plotly не загружена!');
-        showError('Библиотека Plotly не загружена. Пожалуйста, обновите страницу.');
-        return;
-    }
-    
-    // Настройка обработчиков
-    setupEventHandlers();
-    
-    // Инициализация графика
-    initializePlot();
-    
-    // Авто-анализ при загрузке (опционально)
+    // Даем время на загрузку библиотек
     setTimeout(() => {
-        // Можно закомментировать, если не нужно авто-заполнение
-        // document.getElementById('functionInput').value = 'x^2 - 4';
-        // analyzeFunction();
+        if (!checkLibraries()) {
+            showError('Библиотеки не загружены. Проверьте подключение к интернету и обновите страницу.');
+            return;
+        }
+        
+        // Настройка обработчиков
+        setupEventHandlers();
+        
+        // Инициализация графика
+        initializePlot();
+        
+        // Авто-анализ при загрузке
+        setTimeout(() => {
+            const input = document.getElementById('functionInput');
+            if (input && input.value) {
+                analyzeFunction();
+            }
+        }, 300);
+        
+        console.log('✅ Анализатор функций готов к работе!');
     }, 500);
-});
+}
+
+// Запуск приложения
+document.addEventListener('DOMContentLoaded', initApp);
 
 // Экспорт для отладки
 window.FunctionAnalyzer = {
     analyze: analyzeFunction,
-    getCurrentFunction: () => currentFunction
-}; 
-
-console.log('✅ Анализатор функций готов к работе!');
+    getCurrentFunction: () => currentFunction,
+    checkLibraries: checkLibraries
+};
