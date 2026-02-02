@@ -13,32 +13,34 @@ function parseFunction(expr) {
     const displayExpr = expr;
     currentExpression = expr;
     
-    // Подготовка выражения для eval
-    expr = expr
-        .replace(/\s+/g, '') // Убираем пробелы
-        .replace(/\^/g, '**') // ^ заменяем на **
-        .toLowerCase();
-    
     return {
         evaluate: function(x) {
             try {
-                // Заменяем x на значение с учетом математических функций
-                let evalExpr = expr
-                    .replace(/x/g, `(${x})`)
+                // Сначала обрабатываем специальные замены
+                let processedExpr = expr
+                    .replace(/\s+/g, '') // Убираем пробелы
+                    .replace(/\^/g, '**') // ^ заменяем на **
+                    .toLowerCase();
+                
+                // Заменяем математические функции
+                processedExpr = processedExpr
                     .replace(/sin\(/g, 'Math.sin(')
                     .replace(/cos\(/g, 'Math.cos(')
                     .replace(/tan\(/g, 'Math.tan(')
                     .replace(/log10\(/g, 'Math.log10(')
                     .replace(/log\(/g, 'Math.log(') // log(x) -> натуральный логарифм
                     .replace(/ln\(/g, 'Math.log(')
-                    .replace(/exp\(/g, 'Math.exp(')
+                    .replace(/exp\(/g, 'Math.exp(') // exp(x) -> e^x
                     .replace(/sqrt\(/g, 'Math.sqrt(')
                     .replace(/abs\(/g, 'Math.abs(')
                     .replace(/pi/g, 'Math.PI')
                     .replace(/e/g, 'Math.E');
                 
-                // Безопасная оценка
-                const result = eval(evalExpr);
+                // Заменяем x на его значение
+                processedExpr = processedExpr.replace(/x/g, x);
+                
+                // Безопасная оценка через Function (лучше чем eval)
+                const result = new Function('return ' + processedExpr)();
                 
                 // Проверка на специальные случаи
                 if (result === Infinity || result === -Infinity) {
@@ -52,6 +54,8 @@ function parseFunction(expr) {
                 return result;
             } catch(e) {
                 console.error('Ошибка вычисления:', e);
+                console.error('Выражение:', expr);
+                console.error('Значение x:', x);
                 return null;
             }
         },
@@ -84,21 +88,42 @@ function analyzeFunction() {
         // Создаем функцию
         const func = parseFunction(expr);
         
-        // Тестируем функцию в нескольких точках
+        // Тестируем функцию
         let testPoints = [];
-        if (expr.includes('log') || expr.includes('/x')) {
-            // Для логарифмических и дробных функций тестируем в положительных точках
-            testPoints = [1, 2, 0.5, 10];
+        
+        // Выбираем тестовые точки в зависимости от типа функции
+        if (expr.toLowerCase().includes('log')) {
+            // Для логарифмических функций используем положительные значения
+            testPoints = [0.5, 1, 2, Math.E];
+        } else if (expr.toLowerCase().includes('exp')) {
+            // Для экспоненты
+            testPoints = [-2, -1, 0, 1];
+        } else if (expr.includes('/x') && !expr.includes('x**')) {
+            // Для дробных функций избегаем 0
+            testPoints = [-2, -1, 1, 2];
         } else {
-            testPoints = [-1, 0, 1, 2];
+            testPoints = [-2, -1, 0, 1, 2];
         }
         
         let validTest = false;
         for (let x of testPoints) {
             const testResult = func.evaluate(x);
+            console.log(`Тест f(${x}) =`, testResult);
             if (testResult !== null && isFinite(testResult)) {
                 validTest = true;
                 break;
+            }
+        }
+        
+        if (!validTest) {
+            // Пробуем еще раз с другими точками
+            testPoints = [0.1, 1, 10];
+            for (let x of testPoints) {
+                const testResult = func.evaluate(x);
+                if (testResult !== null && isFinite(testResult)) {
+                    validTest = true;
+                    break;
+                }
             }
         }
         
@@ -153,7 +178,7 @@ function analyzeFunctionProperties(expr, func) {
         description: 'Множество допустимых значений x'
     });
     
-    // 3. Нули функции
+    // 3. Нули функции - ИСПРАВЛЕНО для 1/x
     const zeros = findZeros(func, expr);
     properties.push({
         title: 'Нули функции',
@@ -196,7 +221,7 @@ function analyzeFunctionProperties(expr, func) {
         });
     }
     
-    if (expr.includes('log')) {
+    if (expr.toLowerCase().includes('log')) {
         properties.push({
             title: 'Особые точки',
             value: 'x ≤ 0 не входит в область определения',
@@ -205,7 +230,8 @@ function analyzeFunctionProperties(expr, func) {
         });
     }
     
-    if (expr.includes('/x') && !expr.includes('x**2')) {
+    if (expr.includes('/x') && !expr.includes('**')) {
+        // Только для простых дробей типа 1/x
         properties.push({
             title: 'Асимптоты',
             value: 'x = 0',
@@ -228,7 +254,7 @@ function analyzeFunctionProperties(expr, func) {
     return properties;
 }
 
-// Поиск нулей функции
+// Поиск нулей функции - ИСПРАВЛЕНО для 1/x
 function findZeros(func, expr) {
     const zeros = [];
     
@@ -248,41 +274,55 @@ function findZeros(func, expr) {
         return zeros;
     }
     
-    if (expr === '2*x + 1') {
+    if (expr === '2*x + 1' || expr === '2*x+1') {
         zeros.push('-0.5');
         return zeros;
     }
     
-    if (expr.includes('log')) {
+    // Важное исправление: 1/x НЕ имеет нулей
+    if (expr === '1/x' || expr === '1**/x' || expr === '1/x**1') {
+        return zeros; // Пустой массив - нет нулей
+    }
+    
+    if (expr.toLowerCase().includes('log')) {
         // Логарифм равен нулю при x = 1
         zeros.push('1');
         return zeros;
     }
     
-    // Численный поиск
-    const searchRange = 10;
-    const step = 0.2;
+    if (expr.toLowerCase().includes('exp')) {
+        // Экспонента никогда не равна 0
+        return zeros;
+    }
     
-    for (let x = -searchRange; x <= searchRange; x += step) {
-        try {
-            const y1 = func.evaluate(x);
-            const y2 = func.evaluate(x + step);
-            
-            if (y1 !== null && y2 !== null) {
-                // Проверяем знак
-                if (y1 === 0) {
-                    zeros.push(x.toFixed(2));
-                } else if (y1 * y2 < 0) {
-                    // Знак изменился - есть корень
-                    const zero = (x + step/2).toFixed(2);
-                    zeros.push(zero);
-                } else if (Math.abs(y1) < 0.1) {
-                    // Близко к нулю
-                    zeros.push(x.toFixed(2));
+    // Численный поиск только если не дробная функция типа 1/x
+    if (!(expr.includes('/x') && !expr.includes('**'))) {
+        const searchRange = 10;
+        const step = 0.2;
+        
+        for (let x = -searchRange; x <= searchRange; x += step) {
+            try {
+                // Для дробных функций пропускаем ноль
+                if (expr.includes('/x') && Math.abs(x) < 0.1) {
+                    continue;
                 }
+                
+                const y1 = func.evaluate(x);
+                const y2 = func.evaluate(x + step);
+                
+                if (y1 !== null && y2 !== null && isFinite(y1) && isFinite(y2)) {
+                    // Проверяем знак
+                    if (Math.abs(y1) < 0.01) {
+                        zeros.push(x.toFixed(2));
+                    } else if (y1 * y2 < 0) {
+                        // Знак изменился - есть корень
+                        const zero = (x + step/2).toFixed(2);
+                        zeros.push(zero);
+                    }
+                }
+            } catch(e) {
+                continue;
             }
-        } catch(e) {
-            continue;
         }
     }
     
@@ -324,12 +364,18 @@ function checkParity(func) {
 
 // Анализ поведения на бесконечности
 function analyzeBehavior(func, expr) {
+    expr = expr.toLowerCase();
+    
     if (expr.includes('exp')) {
         return 'при x → +∞: +∞, при x → -∞: 0';
     }
     
     if (expr.includes('log')) {
         return 'при x → +∞: +∞, при x → 0+: -∞';
+    }
+    
+    if (expr === '1/x' || expr === '1**/x') {
+        return 'при x → 0+: +∞, при x → 0-: -∞, при x → ±∞: 0';
     }
     
     if (expr.includes('x**2') || expr.match(/x\*\*[2468]/)) {
@@ -348,6 +394,7 @@ function analyzeBehavior(func, expr) {
 function determineFunctionType(expr) {
     expr = expr.toLowerCase();
     
+    if (expr === '1/x' || expr === '1**/x') return 'Обратная пропорциональность';
     if (expr.includes('x**2') || expr.includes('x^2')) return 'Квадратичная (парабола)';
     if (expr.includes('x**3') || expr.includes('x^3')) return 'Кубическая';
     if (expr.includes('sin') || expr.includes('cos') || expr.includes('tan')) return 'Тригонометрическая';
@@ -364,7 +411,7 @@ function determineFunctionType(expr) {
 function getFunctionDomain(expr) {
     expr = expr.toLowerCase();
     
-    if (expr.includes('/x')) {
+    if (expr === '1/x' || expr === '1**/x') {
         return '(-∞, 0) ∪ (0, +∞)';
     }
     if (expr.includes('log')) {
@@ -381,7 +428,7 @@ function getFunctionDomain(expr) {
 function plotFunction(func, expr) {
     try {
         const range = parseInt(document.getElementById('xRange').value) || 10;
-        let step = range / 150; // Увеличиваем количество точек
+        let step = range / 200; // Увеличиваем количество точек
         
         const xValues = [];
         const yValues = [];
@@ -390,9 +437,19 @@ function plotFunction(func, expr) {
         let startX = -range;
         let endX = range;
         
-        if (expr.includes('log')) {
+        if (expr.toLowerCase().includes('log')) {
             // Для логарифмических функций начинаем с малого положительного числа
             startX = 0.001;
+            endX = range > 20 ? 20 : range;
+            step = endX / 150;
+        } else if (expr.toLowerCase().includes('exp')) {
+            // Для экспоненты ограничиваем отрицательные значения
+            startX = -range > -10 ? -10 : -range;
+            endX = range > 5 ? 5 : range;
+            step = (endX - startX) / 200;
+        } else if (expr === '1/x' || expr === '1**/x') {
+            // Для 1/x делаем разрыв в 0
+            startX = -range;
             endX = range;
             step = range / 100;
         }
@@ -400,9 +457,16 @@ function plotFunction(func, expr) {
         // Генерация точек
         for (let x = startX; x <= endX; x += step) {
             try {
+                // Для 1/x пропускаем точку около 0
+                if ((expr === '1/x' || expr === '1**/x') && Math.abs(x) < 0.01) {
+                    xValues.push(x);
+                    yValues.push(null); // Разрыв
+                    continue;
+                }
+                
                 const y = func.evaluate(x);
                 
-                if (y !== null && isFinite(y) && Math.abs(y) < 10000) {
+                if (y !== null && isFinite(y) && Math.abs(y) < 1000) {
                     xValues.push(x);
                     yValues.push(y);
                 } else {
@@ -430,11 +494,10 @@ function plotFunction(func, expr) {
         };
         
         // Настройка осей
-        let yAxisRange = [-range, range];
-        if (expr.includes('log')) {
-            yAxisRange = [-5, 10];
-        } else if (expr.includes('exp')) {
-            yAxisRange = [-1, range];
+        let yAxisRange = null; // Автоматическая настройка
+        
+        if (expr.toLowerCase().includes('exp')) {
+            yAxisRange = [-1, 50];
         }
         
         // Обновление layout
@@ -541,17 +604,17 @@ function resetGraphView() {
     
     let startX = -range;
     let endX = range;
-    let yAxisRange = [-range, range];
     
-    if (currentExpression.includes('log')) {
+    if (currentExpression.toLowerCase().includes('log')) {
         startX = 0.001;
-        endX = range;
-        yAxisRange = [-5, 10];
+        endX = range > 20 ? 20 : range;
+    } else if (currentExpression.toLowerCase().includes('exp')) {
+        startX = -range > -10 ? -10 : -range;
+        endX = range > 5 ? 5 : range;
     }
     
     Plotly.relayout('plot', {
-        'xaxis.range': [startX, endX],
-        'yaxis.range': yAxisRange
+        'xaxis.range': [startX, endX]
     });
 }
 
@@ -668,4 +731,4 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
 } else {
     initApp();
-} 
+}
