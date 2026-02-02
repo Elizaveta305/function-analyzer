@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Анализатор математических функций</title>
     
-    <!-- ТОЛЬКО Plotly -->
+    <!-- Библиотеки -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     
     <!-- Стили -->
@@ -27,18 +27,19 @@
                 <h3>🔍 Введите функцию</h3>
                 <div class="input-area">
                     <input type="text" id="functionInput" 
-                           placeholder="Например: x^2 - 3*x + 2"
-                           value="x^2">
+                           placeholder="Например: x**2 - 3*x + 2"
+                           value="x**2">
                     <button id="calculateBtn" class="primary-btn">Анализировать</button>
                 </div>
                 <div class="hint-box">
                     <p><strong>📝 Как вводить:</strong></p>
                     <ul>
                         <li><code>2*x + 3</code> — умножение</li>
-                        <li><code>x^2</code> — степень (используйте **)</li>
+                        <li><code>x**2</code> — степень (используйте **)</li>
                         <li><code>sin(x)</code>, <code>cos(x)</code> — тригонометрия</li>
-                        <li><code>log(x)</code> — логарифм, <code>exp(x)</code> — экспонента</li>
+                        <li><code>log(x)</code>, <code>exp(x)</code> — логарифмы и экспоненты</li>
                         <li><code>sqrt(x)</code> — квадратный корень</li>
+                        <li><code>1/x</code> — обратная функция</li>
                     </ul>
                 </div>
                 
@@ -51,35 +52,36 @@
                         <button class="example-btn" data-func="1/x">1/x</button>
                         <button class="example-btn" data-func="exp(x)">eˣ</button>
                         <button class="example-btn" data-func="log(x)">log(x)</button>
+                        <button class="example-btn" data-func="sqrt(x)">√x</button>
+                        <button class="example-btn" data-func="abs(x)">|x|</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Основной контент -->
+        <!-- Основной контент: СВОЙСТВА слева, ГРАФИК справа -->
         <div class="main-content">
-            <!-- Свойства функции -->
+            <!-- Свойства функции (СЛЕВА) -->
             <div class="properties-card">
                 <div class="card-header">
                     <h3>📊 Свойства функции</h3>
-                    <div class="function-display" id="currentFunction">f(x) = x^2</div>
+                    <div class="function-display" id="currentFunction">f(x) = x**2</div>
                 </div>
                 
                 <div id="propertiesOutput">
-                    <div class="empty-state">
-                        <div class="empty-icon">📈</div>
-                        <p>Функция не проанализирована</p>
-                        <p>Введите функцию и нажмите "Анализировать"</p>
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Загрузка анализатора...</p>
                     </div>
                 </div>
             </div>
 
-            <!-- График -->
+            <!-- График (СПРАВА) -->
             <div class="graph-card">
                 <div class="card-header">
                     <h3>📈 График функции</h3>
                     <div class="graph-stats">
-                        <span id="graphStatus">Готов к построению</span>
+                        <span id="graphStatus">Инициализация...</span>
                     </div>
                 </div>
                 
@@ -101,7 +103,7 @@
             </div>
         </div>
 
-        <!-- Остальная часть HTML без изменений -->
+        <!-- Информация о возможностях -->
         <div class="capabilities-section">
             <h3>✨ Возможности анализатора</h3>
             <div class="capabilities-grid">
@@ -128,15 +130,37 @@
             </div>
         </div>
 
+        <!-- Техническая информация -->
+        <div class="tech-section">
+            <h3>⚙️ Техническая информация</h3>
+            <div class="tech-details">
+                <div class="tech-item">
+                    <strong>Технологии:</strong> HTML5, CSS3, JavaScript
+                </div>
+                <div class="tech-item">
+                    <strong>Библиотеки:</strong> Plotly.js (графики), встроенный парсер (вычисления)
+                </div>
+                <div class="tech-item">
+                    <strong>Поддерживаемые функции:</strong> 
+                    sin, cos, tan, exp, log, sqrt, abs, арифметические операции
+                </div>
+                <div class="tech-item">
+                    <strong>Исходный код:</strong> 
+                    <a href="https://github.com/elizaveta305/function-analyzer" target="_blank">GitHub репозиторий</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Подвал -->
         <footer>
             <div class="footer-content">
                 <p>© 2026 Анализатор математических функций</p>
-                <p class="footer-note">Проект создан для анализа математических функций</p>
+                <p class="footer-note">Проект создан для анализа математических функций. Используйте ** для степени, * для умножения.</p>
             </div>
         </footer>
     </div>
 
-    <!-- Наш JavaScript (БЕЗ Math.js) -->
+    <!-- Наш JavaScript -->
     <script src="script.js"></script>
 </body>
-</html>
+</html> 
