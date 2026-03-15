@@ -1,11 +1,11 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 6.2 - Fixed Type Detection)
-// Улучшено распознавание типов функций
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 6.3 - Fixed toFixed Error)
+// Исправлена ошибка formatNumber для строковых значений
 // ============================================
 
 let currentFunction = null;
 let currentExpression = '';
-let currentType = 'unknown'; // Глобальное хранение типа
+let currentType = 'unknown';
 
 // --- ЯДРО: Парсер ---
 function parseFunction(expr) {
@@ -62,7 +62,6 @@ function parseFunction(expr) {
 
 // === УЛУЧШЕННОЕ ОПРЕДЕЛЕНИЕ ТИПА ФУНКЦИИ ===
 function getFunctionType(expr) {
-    // Убираем всё лишнее: пробелы, y=, f(x)=, звёздочки умножения
     let clean = expr.toLowerCase()
         .replace(/\s/g, '')
         .replace(/y=/g, '')
@@ -70,23 +69,18 @@ function getFunctionType(expr) {
         .replace(/\*\*/g, '^')
         .replace(/\*/g, '');
     
-    // Точные совпадения для кнопок примеров
     if (clean === 'x') return 'linear_origin';
     if (clean === 'x^2') return 'quadratic_origin';
     if (clean === 'x^3') return 'cubic_origin';
     if (clean === '1/x') return 'inverse';
     
-    // Тригонометрия
     if (clean.includes('tan(')) return 'tan';
     if (clean.includes('cot(')) return 'cot';
     if (clean.includes('sin(')) return 'sin';
     if (clean.includes('cos(')) return 'cos';
-    
-    // Экспонента и логарифм
     if (clean.includes('exp(')) return 'exp';
     if (clean.includes('log(') || clean.includes('ln(')) return 'log';
     
-    // Общие типы
     if (clean.includes('x^2')) return 'quadratic_general';
     if (clean.includes('x^3')) return 'cubic_general';
     if (clean.includes('/x')) return 'rational';
@@ -108,7 +102,7 @@ const ANALYTICAL_DATA = {
         localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
         domain: '(-∞; +∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: ['0']
+        zeros: [0]
     },
     'quadratic_origin': {
         range: '[0; +∞)',
@@ -121,7 +115,7 @@ const ANALYTICAL_DATA = {
         localExtrema: { text: 'Минимум при x=0', desc: 'Единственная точка экстремума' },
         domain: '(-∞; +∞)',
         parity: { result: 'Чётная', desc: 'Симметрия относительно оси OY' },
-        zeros: ['0']
+        zeros: [0]
     },
     'cubic_origin': {
         range: '(-∞; +∞)',
@@ -134,7 +128,7 @@ const ANALYTICAL_DATA = {
         localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
         domain: '(-∞; +∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: ['0']
+        zeros: [0]
     },
     'inverse': {
         range: '(-∞; 0) ∪ (0; +∞)',
@@ -173,7 +167,7 @@ const ANALYTICAL_DATA = {
         localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
         domain: '(0; +∞)',
         parity: { result: 'Общего вида', desc: 'Нет симметрии' },
-        zeros: ['1']
+        zeros: [1]
     },
     'sin': {
         range: '[-1; 1]',
@@ -186,7 +180,7 @@ const ANALYTICAL_DATA = {
         localExtrema: { text: 'Максимумы при π/2+2πn, Минимумы при -π/2+2πn', desc: 'Бесконечное кол-во' },
         domain: '(-∞; +∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: ['0', '3.14', '-3.14']
+        zeros: [0, 3.14, -3.14, 6.28, -6.28]
     },
     'cos': {
         range: '[-1; 1]',
@@ -199,7 +193,7 @@ const ANALYTICAL_DATA = {
         localExtrema: { text: 'Максимумы при 2πn, Минимумы при π+2πn', desc: 'Бесконечное кол-во' },
         domain: '(-∞; +∞)',
         parity: { result: 'Чётная', desc: 'Симметрия относительно оси OY' },
-        zeros: ['1.57', '-1.57', '4.71']
+        zeros: [1.57, -1.57, 4.71, -4.71]
     },
     'tan': {
         range: '(-∞; +∞)',
@@ -212,7 +206,7 @@ const ANALYTICAL_DATA = {
         localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' },
         domain: 'Все x, кроме π/2 + πn',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: ['0', '3.14', '-3.14']
+        zeros: [0, 3.14, -3.14, 6.28, -6.28]
     },
     'cot': {
         range: '(-∞; +∞)',
@@ -225,7 +219,7 @@ const ANALYTICAL_DATA = {
         localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' },
         domain: 'Все x, кроме πn',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: ['1.57', '-1.57', '4.71']
+        zeros: [1.57, -1.57, 4.71, -4.71]
     }
 };
 
@@ -245,9 +239,8 @@ function analyzeFunction() {
         try {
             const func = parseFunction(expr);
             const type = getFunctionType(expr);
-            currentType = type; // Сохраняем тип глобально
+            currentType = type;
             
-            // Отладка в консоль
             console.log('Выражение:', expr);
             console.log('Распознанный тип:', type);
             console.log('Есть в базе знаний:', !!ANALYTICAL_DATA[type]);
@@ -352,6 +345,15 @@ function analyzeFunctionProperties(expr, func, type) {
     props.push({ title: '13. Локальные экстремумы', value: extremaInfo.text, icon: '🏔️', desc: extremaInfo.desc });
 
     return props;
+}
+
+// === ИСПРАВЛЕННАЯ ФУНКЦИЯ formatNumber ===
+function formatNumber(num) {
+    // Сначала преобразуем в число (если это строка)
+    const number = Number(num);
+    if (isNaN(number)) return num;
+    if (Math.abs(number) < 0.001) return '0';
+    return Number(number.toFixed(2)).toString();
 }
 
 // === ЧИСЛЕННЫЕ МЕТОДЫ (Fallback) ===
@@ -481,10 +483,10 @@ function getDomain(expr, type) {
 function findZeros(func, expr, type) {
     if (type === 'exp') return [];
     if (type === 'inverse') return [];
-    if (type === 'log') return ['1'];
-    if (type === 'tan') return ['0', '3.14', '-3.14'];
-    if (type === 'cot') return ['1.57', '-1.57', '4.71'];
-    if (['linear_origin', 'cubic_origin', 'quadratic_origin'].includes(type)) return ['0'];
+    if (type === 'log') return [1];
+    if (type === 'tan') return [0, 3.14, -3.14];
+    if (type === 'cot') return [1.57, -1.57, 4.71];
+    if (['linear_origin', 'cubic_origin', 'quadratic_origin'].includes(type)) return [0];
     
     const rawZeros = [];
     for (let x = -10; x <= 10; x += 0.1) {
@@ -523,11 +525,6 @@ function getContinuityValue(expr, type) {
     if (expr.includes('/x')) return 'Разрывна при x=0';
     if (type === 'log') return 'Непрерывна на (0; +∞)';
     return 'Непрерывна (предположительно)';
-}
-
-function formatNumber(num) {
-    if (Math.abs(num) < 0.001) return '0';
-    return Number(num.toFixed(2)).toString();
 }
 
 // === ГРАФИК ===
