@@ -1,6 +1,6 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 5.0 - FULL ANALYSIS)
-// Реализован полный список свойств функции (13 пунктов)
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 5.1 - Tan/Cot Support)
+// Добавлена поддержка tan(x), cot(x) и улучшена отрисовка разрывов
 // ============================================
 
 let currentFunction = null;
@@ -18,7 +18,70 @@ function parseFunction(expr) {
                     .replace(/\s+/g, '') 
                     .replace(/\^/g, '**'); 
 
+                // ЭТАП 1: Функции → временные метки
+                // Добавлено support для cot
                 processedExpr = processedExpr
+                    .replace(/sin\(/g, '__FN_SIN__(')
+                    .replace(/cos\(/g, '__FN_COS__(')
+                    .replace(/tan\(/g, '__FN_TAN__(')
+                    .replace(/cot\(/g, '__FN_COT__(') // Поддержка котангенса
+                    .replace(/log10\(/g, '__FN_LOG10__(')
+                    .replace(/log\(/g, '__FN_LOG__(') 
+                    .replace(/ln\(/g, '__FN_LN__(')
+                    .replace(/exp\(/g, '__FN_EXP__(') 
+                    .replace(/sqrt\(/g, '__FN_SQRT__(')
+                    .replace(/abs\(/g, '__FN_ABS__(');
+
+                // ЭТАП 2: Константы и переменная
+                processedExpr = processedExpr.replace(/\bpi\b/gi, 'Math.PI');
+                processedExpr = processedExpr.replace(/\be\b/g, 'Math.E'); 
+                processedExpr = processedExpr.replace(/\bx\b/g, `(${xVal})`); 
+                
+                // ЭТАП 3: Восстановление функций
+                // cot(x) = 1 / tan(x) = cos(x) / sin(x)
+                processedExpr = processedExpr
+                    .replace(/__FN_SIN__\(/g, 'Math.sin(')
+                    .replace(/__FN_COS__\(/g, 'Math.cos(')
+                    .replace(/__FN_TAN__\(/g, 'Math.tan(')
+                    .replace(/__FN_COT__\(/g, '(1/Math.tan(') // Реализация котангенса
+                    .replace(/__FN_LOG10__\(/g, 'Math.log10(')
+                    .replace(/__FN_LOG__\(/g, 'Math.log(') 
+                    .replace(/__FN_LN__\(/g, 'Math.log(')
+                    .replace(/__FN_EXP__\(/g, 'Math.exp(')
+                    .replace(/__FN_SQRT__\(/g, 'Math.sqrt(')
+                    .replace(/__FN_ABS__\(/g, 'Math.abs(');
+                
+                // Закрываем скобку для котангенса, если она была открыта как (1/Math.tan(
+                // Но так как мы заменяем cot( на (1/Math.tan(, то закрывающая скобка от пользователя закроет tan, 
+                // а нам нужно закрыть всю конструкцию. 
+                // Хитрость: заменим __FN_COT__( на (1/Math.tan(, а потом в конце добавим обработку?
+                // Проще: cot(x) -> (Math.cos(x)/Math.sin(x))
+                
+                // ПЕРЕПИСЫВАЕМ ЗАМЕНУ COT ДЛЯ НАДЕЖНОСТИ:
+                // Вернемся к шагу 1 и сделаем замену на отношение
+                // Но чтобы не ломать логику, сделаем так:
+                // В шаге 3 заменим __FN_COT__( на (Math.cos(/Math.sin( ? Нет, сложно.
+                // Давайте проще: в шаге 1 заменим cot( на __FN_COT_START__ и будем хитрить.
+                
+                // ИСПРАВЛЕННЫЙ ПОДХОД ДЛЯ COT:
+                // Заменим в самом начале expr.replace(/cot\(/g, '(__FN_COS__/__FN_SIN__')
+                // Тогда скобка пользователя закроет знаменатель.
+                
+                // Возвращаемся к началу функции для корректной обработки cot
+                // (Перезапуск логики парсинга внутри этой функции для ясности)
+                
+                let cleanExpr = expr.replace(/\s+/g, '').replace(/\^/g, '**');
+                
+                // Специальная замена cot(x) -> (cos(x)/sin(x)) перед основными заменами
+                // Используем регулярку, которая захватывает содержимое скобок? Слишком сложно для вложенных.
+                // Простой вариант: заменим cot( на (1/tan(, но tan тоже надо обработать.
+                
+                // Самый надежный способ для школьного проекта:
+                cleanExpr = cleanExpr.replace(/cot\(/g, '(1/__FN_TAN__('); 
+                // Тогда потом __FN_TAN__( станет Math.tan(, и получится (1/Math.tan(...))
+                // Это сработает!
+                
+                cleanExpr = cleanExpr
                     .replace(/sin\(/g, '__FN_SIN__(')
                     .replace(/cos\(/g, '__FN_COS__(')
                     .replace(/tan\(/g, '__FN_TAN__(')
@@ -29,11 +92,11 @@ function parseFunction(expr) {
                     .replace(/sqrt\(/g, '__FN_SQRT__(')
                     .replace(/abs\(/g, '__FN_ABS__(');
 
-                processedExpr = processedExpr.replace(/\bpi\b/gi, 'Math.PI');
-                processedExpr = processedExpr.replace(/\be\b/g, 'Math.E'); 
-                processedExpr = processedExpr.replace(/\bx\b/g, `(${xVal})`); 
+                cleanExpr = cleanExpr.replace(/\bpi\b/gi, 'Math.PI');
+                cleanExpr = cleanExpr.replace(/\be\b/g, 'Math.E'); 
+                cleanExpr = cleanExpr.replace(/\bx\b/g, `(${xVal})`); 
                 
-                processedExpr = processedExpr
+                cleanExpr = cleanExpr
                     .replace(/__FN_SIN__\(/g, 'Math.sin(')
                     .replace(/__FN_COS__\(/g, 'Math.cos(')
                     .replace(/__FN_TAN__\(/g, 'Math.tan(')
@@ -44,7 +107,7 @@ function parseFunction(expr) {
                     .replace(/__FN_SQRT__\(/g, 'Math.sqrt(')
                     .replace(/__FN_ABS__\(/g, 'Math.abs(');
                 
-                const result = new Function('return ' + processedExpr)();
+                const result = new Function('return ' + cleanExpr)();
                 
                 if (!isFinite(result) || isNaN(result)) return null;
                 return result;
@@ -76,7 +139,9 @@ function analyzeFunction() {
             
             // Тестовый запуск
             let isValid = false;
-            const testPoints = expr.toLowerCase().includes('log') ? [1, 2, Math.E, 10] : [-2, -1, 0, 1, 2];
+            // Для тангенса и котангенса нужны особые точки проверки
+            const isTrigTan = expr.toLowerCase().includes('tan') || expr.toLowerCase().includes('cot');
+            const testPoints = isTrigTan ? [0.1, 0.5, 1, 2] : (expr.toLowerCase().includes('log') ? [1, 2, Math.E, 10] : [-2, -1, 0, 1, 2]);
             
             for (let x of testPoints) {
                 if (func.evaluate(x) !== null) { isValid = true; break; }
@@ -116,7 +181,7 @@ function analyzeFunctionProperties(expr, func) {
     // 1. Область определения
     props.push({ title: '1. Область определения', value: getDomain(expr), icon: '🌐', desc: 'D(f)' });
 
-    // 2. Область значений (Численная оценка)
+    // 2. Область значений
     const rangeInfo = findRange(func, expr);
     props.push({ title: '2. Область значений', value: rangeInfo.text, icon: '📏', desc: 'E(f)' });
 
@@ -137,7 +202,7 @@ function analyzeFunctionProperties(expr, func) {
     // 5. Четность
     props.push({ title: '5. Четность', value: checkParity(func).result, icon: '🔄', desc: checkParity(func).desc });
 
-    // 6. Монотонность (Возрастание/Убывание)
+    // 6. Монотонность
     const mono = findMonotonicity(func, expr);
     props.push({ title: '6. Монотонность', value: mono.text, icon: '📈', desc: mono.desc });
 
@@ -149,7 +214,7 @@ function analyzeFunctionProperties(expr, func) {
     const bounded = checkBoundedness(func, expr);
     props.push({ title: '8. Ограниченность', value: bounded.text, icon: '🔒', desc: bounded.desc });
 
-    // 9. Наибольшее и наименьшее значение (на промежутке [-10; 10])
+    // 9. Наибольшее и наименьшее значение
     const extremes = findGlobalExtremes(func, expr);
     props.push({ title: '9. Наим. и наиб. значение', value: extremes.text, icon: '🏆', desc: 'На промежутке [-10; 10]' });
 
@@ -157,19 +222,20 @@ function analyzeFunctionProperties(expr, func) {
     const continuity = checkContinuity(func, expr);
     props.push({ title: '10. Непрерывность', value: continuity.text, icon: '〰️', desc: continuity.desc });
 
-    // 11. Выпуклость (Численная оценка второй производной)
+    // 11. Выпуклость
     const convex = checkConvexity(func, expr);
     props.push({ title: '11. Выпуклость', value: convex.text, icon: '📉', desc: convex.desc });
 
     // 12. Периодичность
-    if (lower.includes('sin') || lower.includes('cos') || lower.includes('tan')) {
-        const period = lower.includes('tan') ? 'π' : '2π';
+    if (lower.includes('sin') || lower.includes('cos') || lower.includes('tan') || lower.includes('cot')) {
+        let period = '2π';
+        if (lower.includes('tan') || lower.includes('cot')) period = 'π';
         props.push({ title: '12. Периодичность', value: `Периодическая (T=${period})`, icon: '⏱️', desc: 'Повторяется через промежуток' });
     } else {
         props.push({ title: '12. Периодичность', value: 'Не периодическая', icon: '⏱️', desc: 'Не имеет периода' });
     }
 
-    // 13. Экстремумы (Локальные)
+    // 13. Экстремумы
     const extrema = findLocalExtrema(func, expr);
     if (extrema.length > 0) {
         const extText = extrema.map(e => `${e.type === 'max' ? 'Макс' : 'Мин'} при x=${formatNumber(e.x)}`).join('; ');
@@ -184,18 +250,18 @@ function analyzeFunctionProperties(expr, func) {
 // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ АНАЛИЗА ---
 
 function findRange(func, expr) {
-    // Численный поиск мин и макс на большом промежутке
-    let min = Infinity, max = -Infinity;
-    let hasValue = false;
-    const step = 0.1;
-    const rangeLimit = 20; // Смотрим на [-20; 20]
-    
-    // Особые случаи
+    const lower = expr.toLowerCase();
+    if (lower.includes('tan') || lower.includes('cot')) return { text: '(-∞; +∞)', desc: 'Все действительные числа' };
     if (expr.includes('x**2') || expr.includes('^2')) return { text: '[0; +∞)', desc: 'Ветви вверх' };
     if (expr.includes('sin') || expr.includes('cos')) return { text: '[-1; 1]', desc: 'Стандартный диапазон' };
     if (expr === '1/x') return { text: '(-∞; 0) ∪ (0; +∞)', desc: 'Все кроме 0' };
-    if (expr.toLowerCase().includes('exp')) return { text: '(0; +∞)', desc: 'Только положительные' };
-    if (expr.toLowerCase().includes('log')) return { text: '(-∞; +∞)', desc: 'Все действительные' };
+    if (lower.includes('exp')) return { text: '(0; +∞)', desc: 'Только положительные' };
+    if (lower.includes('log')) return { text: '(-∞; +∞)', desc: 'Все действительные' };
+
+    let min = Infinity, max = -Infinity;
+    let hasValue = false;
+    const step = 0.1;
+    const rangeLimit = 20; 
 
     for (let x = -rangeLimit; x <= rangeLimit; x += step) {
         const y = func.evaluate(x);
@@ -208,7 +274,6 @@ function findRange(func, expr) {
     
     if (!hasValue) return { text: 'Не определено', desc: '' };
     
-    // Проверка на уход в бесконечность (сравнение краевых точек)
     const yStart = func.evaluate(-rangeLimit);
     const yEnd = func.evaluate(rangeLimit);
     
@@ -223,13 +288,12 @@ function findRange(func, expr) {
 }
 
 function findMonotonicity(func, expr) {
-    // Упрощенный анализ: проверяем знак производной в нескольких точках
-    // Если везде положителен -> возрастает, отрицателен -> убывает, меняется -> не монотонна
     let inc = 0, dec = 0;
     const points = [-5, -1, 1, 5];
     
     for (let x of points) {
-        if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
+        if ((expr.toLowerCase().includes('tan') || expr.toLowerCase().includes('cot') || expr.includes('/x')) && Math.abs(x % (Math.PI/2)) < 0.2) continue;
+        
         const y1 = func.evaluate(x);
         const y2 = func.evaluate(x + 0.1);
         if (y1 !== null && y2 !== null) {
@@ -238,23 +302,23 @@ function findMonotonicity(func, expr) {
         }
     }
     
-    if (inc > 0 && dec === 0) return { text: 'Возрастает', desc: 'На всей области определения' };
-    if (dec > 0 && inc === 0) return { text: 'Убывает', desc: 'На всей области определения' };
+    if (inc > 0 && dec === 0) return { text: 'Возрастает', desc: 'На каждом промежутке непрерывности' };
+    if (dec > 0 && inc === 0) return { text: 'Убывает', desc: 'На каждом промежутке непрерывности' };
     return { text: 'Не монотонна', desc: 'Есть промежутки возрастания и убывания' };
 }
 
 function findSignIntervals(func, expr) {
-    // Ищем интервалы, разбитые нулями
     const zeros = findZeros(func, expr);
-    // Добавляем границы области определения если нужно (для простоты берем -10 и 10)
     let points = [-10, ...zeros.map(Number), 10];
     points.sort((a,b) => a-b);
     
     let pos = [], neg = [];
     for (let i = 0; i < points.length - 1; i++) {
         let mid = (points[i] + points[i+1]) / 2;
-        // Пропускаем разрывы
-        if (expr.includes('/x') && Math.abs(mid) < 0.1) continue;
+        if (expr.includes('/x') || expr.toLowerCase().includes('tan') || expr.toLowerCase().includes('cot')) {
+             // Пропуск опасных зон
+             if (Math.abs(mid) < 0.1 || Math.abs(mid % (Math.PI/2)) < 0.2) continue;
+        }
         
         const val = func.evaluate(mid);
         if (val !== null) {
@@ -272,12 +336,12 @@ function findSignIntervals(func, expr) {
 }
 
 function checkBoundedness(func, expr) {
+    const lower = expr.toLowerCase();
+    if (lower.includes('tan') || lower.includes('cot') || expr === '1/x') return { text: 'Не ограничена', desc: 'Уходит в ±∞' };
     if (expr.includes('sin') || expr.includes('cos')) return { text: 'Ограничена', desc: 'Сверху и снизу' };
     if (expr.includes('x**2') || expr.includes('^2')) return { text: 'Ограничена снизу', desc: 'Есть минимум' };
-    if (expr.toLowerCase().includes('exp')) return { text: 'Ограничена снизу', desc: 'y > 0' };
-    if (expr === '1/x') return { text: 'Не ограничена', desc: 'Уходит в ±∞' };
+    if (lower.includes('exp')) return { text: 'Ограничена снизу', desc: 'y > 0' };
     
-    // Проверка по краям
     const y1 = func.evaluate(-100);
     const y2 = func.evaluate(100);
     if ((y1 !== null && Math.abs(y1) > 1000) || (y2 !== null && Math.abs(y2) > 1000)) {
@@ -287,6 +351,9 @@ function checkBoundedness(func, expr) {
 }
 
 function findGlobalExtremes(func, expr) {
+    const lower = expr.toLowerCase();
+    if (lower.includes('tan') || lower.includes('cot') || expr === '1/x') return { text: 'min: -∞, max: +∞', desc: 'Не ограничена' };
+
     let min = Infinity, max = -Infinity;
     let found = false;
     for (let x = -10; x <= 10; x += 0.1) {
@@ -306,21 +373,25 @@ function findGlobalExtremes(func, expr) {
 }
 
 function checkContinuity(func, expr) {
+    const lower = expr.toLowerCase();
+    if (lower.includes('tan')) return { text: 'Разрывна', desc: 'Разрывы при x = π/2 + πn' };
+    if (lower.includes('cot')) return { text: 'Разрывна', desc: 'Разрывы при x = πn' };
     if (expr.includes('/x')) return { text: 'Разрывна', desc: 'Разрыв при x=0' };
-    if (expr.toLowerCase().includes('log')) return { text: 'Непрерывна', desc: 'На области определения (0; +∞)' };
-    if (expr.toLowerCase().includes('tan')) return { text: 'Разрывна', desc: 'Разрывы в точках π/2 + πn' };
+    if (lower.includes('log')) return { text: 'Непрерывна', desc: 'На области определения (0; +∞)' };
     return { text: 'Непрерывна', desc: 'На всей области определения' };
 }
 
 function checkConvexity(func, expr) {
-    // Численная проверка второй производной (знак разности первых производных)
-    // f''(x) ≈ (f(x+h) - 2f(x) + f(x-h)) / h^2
     let up = 0, down = 0;
     const h = 0.5;
     const points = [-5, -2, 2, 5];
     
     for (let x of points) {
         if (expr.includes('/x') && Math.abs(x) < 1) continue;
+        if (expr.toLowerCase().includes('tan') || expr.toLowerCase().includes('cot')) {
+             if (Math.abs(x % (Math.PI/2)) < 0.5) continue;
+        }
+
         const y_m = func.evaluate(x - h);
         const y_0 = func.evaluate(x);
         const y_p = func.evaluate(x + h);
@@ -342,7 +413,12 @@ function findLocalExtrema(func, expr) {
     const extrema = [];
     const step = 0.2;
     const range = 10;
-    if (expr === 'x' || expr === '1/x' || expr.toLowerCase().includes('log') || lowerIncludesAny(expr, ['sin','cos','tan'])) return [];
+    const lower = expr.toLowerCase();
+    
+    // Тангенс и котангенс не имеют локальных экстремумов
+    if (expr === 'x' || expr === '1/x' || lower.includes('log') || lower.includes('tan') || lower.includes('cot') || lower.includes('sin') || lower.includes('cos')) {
+        return [];
+    }
 
     for (let x = -range; x < range; x += step) {
         const y1 = func.evaluate(x);
@@ -360,18 +436,18 @@ function findLocalExtrema(func, expr) {
     return extrema;
 }
 
-function lowerIncludesAny(str, arr) {
-    const low = str.toLowerCase();
-    return arr.some(s => low.includes(s));
-}
-
-// --- СТАРЫЕ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (Оптимизированные) ---
+// --- СТАРЫЕ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 function findZeros(func, expr) {
     const rawZeros = [];
     const step = 0.1;
-    if (expr.toLowerCase().includes('exp')) return [];
-    if (expr === '1/x') return [];
+    const lower = expr.toLowerCase();
     
+    if (lower.includes('exp')) return [];
+    if (expr === '1/x') return [];
+    // Нули котангенса: pi/2 + pi*n. Нули тангенса: pi*n
+    if (lower.includes('cot')) return [1.57, -1.57, 4.71]; // Приближенно pi/2
+    if (lower.includes('tan')) return [0, 3.14, -3.14]; // Приближенно pi
+
     for (let x = -10; x <= 10; x += step) {
         if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
         const y1 = func.evaluate(x);
@@ -403,6 +479,8 @@ function checkParity(func) {
 
 function determineFunctionType(expr) {
     const lower = expr.toLowerCase();
+    if (lower.includes('tan')) return 'Тангенсоида';
+    if (lower.includes('cot')) return 'Котангенсоида';
     if (lower.includes('sin') || lower.includes('cos')) return 'Тригонометрическая';
     if (lower.includes('exp')) return 'Показательная';
     if (lower.includes('log')) return 'Логарифмическая';
@@ -417,6 +495,7 @@ function getDomain(expr) {
     if (lower.includes('sqrt')) return '[0; +∞)';
     if (lower.includes('/x')) return '(-∞; 0) ∪ (0; +∞)';
     if (lower.includes('tan')) return 'Все x, кроме π/2 + πn';
+    if (lower.includes('cot')) return 'Все x, кроме πn';
     return '(-∞; +∞)';
 }
 
@@ -425,19 +504,53 @@ function formatNumber(num) {
     return Number(num.toFixed(2)).toString();
 }
 
-// --- ГРАФИК и UI (Без изменений) ---
+// --- ГРАФИК (С УЛУЧШЕННОЙ ОБРАБОТКОЙ РАЗРЫВОВ) ---
 function plotFunction(func, expr) {
     const range = parseInt(document.getElementById('xRange').value);
-    const step = range / 300;
+    const step = range / 400; // Увеличим детализацию для тангенса
     const xVals = [], yVals = [];
     let startX = -range, endX = range;
+    
     if (expr.toLowerCase().includes('log')) startX = 0.01;
 
+    let lastY = null;
+
     for (let x = startX; x <= endX; x += step) {
-        if (expr.includes('/x') && Math.abs(x) < 0.05) { xVals.push(x); yVals.push(null); continue; }
+        // Пропуск точек вблизи разрывов для тангенса и котангенса
+        const lower = expr.toLowerCase();
+        let skip = false;
+        
+        if (lower.includes('tan')) {
+            // Разрывы в pi/2 + pi*n (~1.57, 4.71...)
+            const distToAsymptote = Math.abs((x - Math.PI/2) % Math.PI);
+            if (distToAsymptote < 0.1 || distToAsymptote > Math.PI - 0.1) skip = true;
+        }
+        if (lower.includes('cot')) {
+            // Разрывы в pi*n (~0, 3.14...)
+            const distToAsymptote = Math.abs(x % Math.PI);
+            if (distToAsymptote < 0.1 || distToAsymptote > Math.PI - 0.1) skip = true;
+        }
+        if (expr.includes('/x') && Math.abs(x) < 0.05) skip = true;
+
+        if (skip) {
+            xVals.push(x);
+            yVals.push(null); // Разрыв
+            lastY = null;
+            continue;
+        }
+
         const y = func.evaluate(x);
-        if (y !== null && Math.abs(y) < 1000) { xVals.push(x); yVals.push(y); }
-        else { xVals.push(x); yVals.push(null); }
+        
+        if (y !== null && isFinite(y) && Math.abs(y) < 2000) { // Ограничение по Y для красивого графика
+            xVals.push(x);
+            yVals.push(y);
+            lastY = y;
+        } else {
+            // Если значение слишком большое (асимптота), делаем разрыв
+            xVals.push(x);
+            yVals.push(null);
+            lastY = null;
+        }
     }
     
     const trace = { x: xVals, y: yVals, mode: 'lines', line: { color: '#2c3e50', width: 3 } };
@@ -447,9 +560,11 @@ function plotFunction(func, expr) {
         yaxis: { title: 'Y', zeroline: true, gridcolor: '#eee' },
         paper_bgcolor: '#fff', plot_bgcolor: '#fff'
     };
+    
     Plotly.react('plot', [trace], layout, {displayModeBar: false});
 }
 
+// --- UI ---
 function updatePropertiesDisplay(props) {
     document.getElementById('propertiesOutput').innerHTML = props.map(p => `
         <div class="property-item">
