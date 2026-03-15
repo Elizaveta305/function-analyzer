@@ -1,10 +1,11 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 6.1 - Universal)
-// База знаний для стандартных функций + численный анализ для остальных
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 6.2 - Fixed Type Detection)
+// Улучшено распознавание типов функций
 // ============================================
 
 let currentFunction = null;
 let currentExpression = '';
+let currentType = 'unknown'; // Глобальное хранение типа
 
 // --- ЯДРО: Парсер ---
 function parseFunction(expr) {
@@ -59,31 +60,176 @@ function parseFunction(expr) {
     };
 }
 
-// --- ОПРЕДЕЛЕНИЕ ТИПА ФУНКЦИИ ---
+// === УЛУЧШЕННОЕ ОПРЕДЕЛЕНИЕ ТИПА ФУНКЦИИ ===
 function getFunctionType(expr) {
-    const lower = expr.toLowerCase().replace(/\s/g, '');
+    // Убираем всё лишнее: пробелы, y=, f(x)=, звёздочки умножения
+    let clean = expr.toLowerCase()
+        .replace(/\s/g, '')
+        .replace(/y=/g, '')
+        .replace(/f\(x\)=/g, '')
+        .replace(/\*\*/g, '^')
+        .replace(/\*/g, '');
     
-    if (lower.includes('tan(')) return 'tan';
-    if (lower.includes('cot(')) return 'cot';
-    if (lower.includes('sin(')) return 'sin';
-    if (lower.includes('cos(')) return 'cos';
-    if (lower.includes('exp(')) return 'exp';
-    if (lower.includes('log(') || lower.includes('ln(')) return 'log';
-    if (lower === '1/x' || lower.match(/^1\/x$/)) return 'inverse';
-    if (lower === 'x') return 'linear_origin';
-    if (lower.match(/^x\*\*2$/) || lower.match(/^x\^2$/)) return 'quadratic_origin';
-    if (lower.match(/^x\*\*3$/) || lower.match(/^x\^3$/)) return 'cubic_origin';
+    // Точные совпадения для кнопок примеров
+    if (clean === 'x') return 'linear_origin';
+    if (clean === 'x^2') return 'quadratic_origin';
+    if (clean === 'x^3') return 'cubic_origin';
+    if (clean === '1/x') return 'inverse';
     
-    // Общие типы для любых других функций
-    if (lower.includes('x**2') || lower.includes('^2')) return 'quadratic_general';
-    if (lower.includes('x**3') || lower.includes('^3')) return 'cubic_general';
-    if (lower.includes('/x')) return 'rational';
-    if (lower.includes('x')) return 'polynomial';
+    // Тригонометрия
+    if (clean.includes('tan(')) return 'tan';
+    if (clean.includes('cot(')) return 'cot';
+    if (clean.includes('sin(')) return 'sin';
+    if (clean.includes('cos(')) return 'cos';
+    
+    // Экспонента и логарифм
+    if (clean.includes('exp(')) return 'exp';
+    if (clean.includes('log(') || clean.includes('ln(')) return 'log';
+    
+    // Общие типы
+    if (clean.includes('x^2')) return 'quadratic_general';
+    if (clean.includes('x^3')) return 'cubic_general';
+    if (clean.includes('/x')) return 'rational';
+    if (clean.includes('x')) return 'polynomial';
     
     return 'unknown';
 }
 
-// --- ОСНОВНАЯ ЛОГИКА ---
+// === БАЗА ЗНАНИЙ ===
+const ANALYTICAL_DATA = {
+    'linear_origin': {
+        range: '(-∞; +∞)',
+        sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
+        bounded: 'Не ограничена',
+        extremes: 'Не имеет (±∞)',
+        continuity: 'Непрерывна на всей области',
+        convexity: null,
+        monotonicity: 'Возрастает на всей области',
+        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
+        domain: '(-∞; +∞)',
+        parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
+        zeros: ['0']
+    },
+    'quadratic_origin': {
+        range: '[0; +∞)',
+        sign: 'f(x)>0 при x∈(-∞; 0)∪(0; +∞); f(x)=0 при x=0',
+        bounded: 'Ограничена снизу',
+        extremes: 'min: 0 (при x=0), max: +∞',
+        continuity: 'Непрерывна на всей области',
+        convexity: { text: 'Выпукла вниз', desc: 'На всей области (a>0)' },
+        monotonicity: 'Убывает при x<0, возрастает при x>0',
+        localExtrema: { text: 'Минимум при x=0', desc: 'Единственная точка экстремума' },
+        domain: '(-∞; +∞)',
+        parity: { result: 'Чётная', desc: 'Симметрия относительно оси OY' },
+        zeros: ['0']
+    },
+    'cubic_origin': {
+        range: '(-∞; +∞)',
+        sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
+        bounded: 'Не ограничена',
+        extremes: 'Не имеет (±∞)',
+        continuity: 'Непрерывна на всей области',
+        convexity: { text: 'Меняет выпуклость', desc: 'Перегиб в точке x=0' },
+        monotonicity: 'Возрастает на всей области',
+        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
+        domain: '(-∞; +∞)',
+        parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
+        zeros: ['0']
+    },
+    'inverse': {
+        range: '(-∞; 0) ∪ (0; +∞)',
+        sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
+        bounded: 'Не ограничена',
+        extremes: 'Не имеет (±∞)',
+        continuity: 'Разрывна при x=0',
+        convexity: { text: 'Разная на промежутках', desc: 'Выпукла вниз при x>0, вверх при x<0' },
+        monotonicity: 'Убывает на (-∞; 0) и на (0; +∞)',
+        localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' },
+        domain: '(-∞; 0) ∪ (0; +∞)',
+        parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
+        zeros: []
+    },
+    'exp': {
+        range: '(0; +∞)',
+        sign: 'f(x)>0 при x∈(-∞; +∞)',
+        bounded: 'Ограничена снизу',
+        extremes: 'min: 0 (асимптота), max: +∞',
+        continuity: 'Непрерывна на всей области',
+        convexity: { text: 'Выпукла вниз', desc: 'На всей области' },
+        monotonicity: 'Возрастает на всей области',
+        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
+        domain: '(-∞; +∞)',
+        parity: { result: 'Общего вида', desc: 'Нет симметрии' },
+        zeros: []
+    },
+    'log': {
+        range: '(-∞; +∞)',
+        sign: 'f(x)>0 при x∈(1; +∞); f(x)<0 при x∈(0; 1)',
+        bounded: 'Не ограничена',
+        extremes: 'Не имеет (±∞)',
+        continuity: 'Непрерывна на (0; +∞)',
+        convexity: { text: 'Выпукла вверх', desc: 'На всей области' },
+        monotonicity: 'Возрастает на всей области',
+        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
+        domain: '(0; +∞)',
+        parity: { result: 'Общего вида', desc: 'Нет симметрии' },
+        zeros: ['1']
+    },
+    'sin': {
+        range: '[-1; 1]',
+        sign: 'Периодически меняется знак',
+        bounded: 'Ограничена (сверху и снизу)',
+        extremes: 'min: -1, max: 1',
+        continuity: 'Непрерывна на всей области',
+        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
+        monotonicity: 'Не монотонна (периодическая)',
+        localExtrema: { text: 'Максимумы при π/2+2πn, Минимумы при -π/2+2πn', desc: 'Бесконечное кол-во' },
+        domain: '(-∞; +∞)',
+        parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
+        zeros: ['0', '3.14', '-3.14']
+    },
+    'cos': {
+        range: '[-1; 1]',
+        sign: 'Периодически меняется знак',
+        bounded: 'Ограничена (сверху и снизу)',
+        extremes: 'min: -1, max: 1',
+        continuity: 'Непрерывна на всей области',
+        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
+        monotonicity: 'Не монотонна (периодическая)',
+        localExtrema: { text: 'Максимумы при 2πn, Минимумы при π+2πn', desc: 'Бесконечное кол-во' },
+        domain: '(-∞; +∞)',
+        parity: { result: 'Чётная', desc: 'Симметрия относительно оси OY' },
+        zeros: ['1.57', '-1.57', '4.71']
+    },
+    'tan': {
+        range: '(-∞; +∞)',
+        sign: 'Периодически меняется знак',
+        bounded: 'Не ограничена',
+        extremes: 'Не имеет (±∞)',
+        continuity: 'Разрывна при x = π/2 + πn',
+        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
+        monotonicity: 'Не монотонна (периодическая)',
+        localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' },
+        domain: 'Все x, кроме π/2 + πn',
+        parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
+        zeros: ['0', '3.14', '-3.14']
+    },
+    'cot': {
+        range: '(-∞; +∞)',
+        sign: 'Периодически меняется знак',
+        bounded: 'Не ограничена',
+        extremes: 'Не имеет (±∞)',
+        continuity: 'Разрывна при x = πn',
+        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
+        monotonicity: 'Не монотонна (периодическая)',
+        localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' },
+        domain: 'Все x, кроме πn',
+        parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
+        zeros: ['1.57', '-1.57', '4.71']
+    }
+};
+
+// === ОСНОВНАЯ ЛОГИКА ===
 function analyzeFunction() {
     const input = document.getElementById('functionInput');
     let expr = input.value.trim();
@@ -99,6 +245,12 @@ function analyzeFunction() {
         try {
             const func = parseFunction(expr);
             const type = getFunctionType(expr);
+            currentType = type; // Сохраняем тип глобально
+            
+            // Отладка в консоль
+            console.log('Выражение:', expr);
+            console.log('Распознанный тип:', type);
+            console.log('Есть в базе знаний:', !!ANALYTICAL_DATA[type]);
             
             let isValid = false;
             let testPoints = [];
@@ -137,17 +289,23 @@ function analyzeFunction() {
     }, 50);
 }
 
-// --- АНАЛИЗ СВОЙСТВ ---
+// === АНАЛИЗ СВОЙСТВ ===
 function analyzeFunctionProperties(expr, func, type) {
     const props = [];
-
-    props.push({ title: '1. Область определения', value: getDomain(expr, type), icon: '🌐', desc: 'D(f)' });
-    props.push({ title: '2. Область значений', value: getRangeValue(expr, func, type), icon: '📏', desc: 'E(f)' });
+    const data = ANALYTICAL_DATA[type];
     
-    const zeros = findZeros(func, expr, type);
+    // 1. Область определения
+    props.push({ title: '1. Область определения', value: data ? data.domain : getDomain(expr, type), icon: '🌐', desc: 'D(f)' });
+    
+    // 2. Область значений
+    props.push({ title: '2. Область значений', value: data ? data.range : calculateRangeNumerically(func), icon: '📏', desc: 'E(f)' });
+    
+    // 3. Нули функции
+    const zeros = data ? data.zeros : findZeros(func, expr, type);
     const zerosText = zeros.length > 0 ? zeros.map(z => formatNumber(z)).join(', ') : 'Нет действительных корней';
     props.push({ title: '3. Нули функции', value: zerosText, icon: '⚫', desc: 'f(x) = 0' });
 
+    // 4. Пересечение с OY
     const y0 = func.evaluate(0);
     const hasZeroAtOrigin = zeros.some(z => Math.abs(parseFloat(z)) < 0.01);
     if (y0 !== null && isFinite(y0)) {
@@ -156,18 +314,32 @@ function analyzeFunctionProperties(expr, func, type) {
         }
     }
 
-    props.push({ title: '5. Четность', value: checkParity(func, type).result, icon: '🔄', desc: checkParity(func, type).desc });
-    props.push({ title: '6. Монотонность', value: getMonotonicityValue(expr, func, type), icon: '📈', desc: 'Характер изменения' });
-    props.push({ title: '7. Знакопостоянство', value: getSignIntervalsValue(expr, func, type), icon: '➕➖', desc: 'Интервалы знака' });
-    props.push({ title: '8. Ограниченность', value: getBoundednessValue(expr, func, type), icon: '🔒', desc: 'Наличие границ' });
-    props.push({ title: '9. Наим. и наиб. значение', value: getGlobalExtremesValue(expr, func, type), icon: '🏆', desc: 'Экстремумы на R' });
-    props.push({ title: '10. Непрерывность', value: getContinuityValue(expr, type), icon: '〰️', desc: 'Точки разрыва' });
+    // 5. Четность
+    const parity = data ? data.parity : checkParity(func, type);
+    props.push({ title: '5. Четность', value: parity.result, icon: '🔄', desc: parity.desc });
     
-    const convexInfo = getConvexityValue(expr, func, type);
+    // 6. Монотонность
+    props.push({ title: '6. Монотонность', value: data ? data.monotonicity : calculateMonotonicityNumerically(func), icon: '📈', desc: 'Характер изменения' });
+    
+    // 7. Знакопостоянство
+    props.push({ title: '7. Знакопостоянство', value: data ? data.sign : calculateSignIntervalsNumerically(func, expr), icon: '➕➖', desc: 'Интервалы знака' });
+    
+    // 8. Ограниченность
+    props.push({ title: '8. Ограниченность', value: data ? data.bounded : calculateBoundednessNumerically(func), icon: '🔒', desc: 'Наличие границ' });
+    
+    // 9. Наим. и наиб. значение
+    props.push({ title: '9. Наим. и наиб. значение', value: data ? data.extremes : calculateExtremesNumerically(func), icon: '🏆', desc: 'Экстремумы на R' });
+    
+    // 10. Непрерывность
+    props.push({ title: '10. Непрерывность', value: data ? data.continuity : getContinuityValue(expr, type), icon: '〰️', desc: 'Точки разрыва' });
+    
+    // 11. Выпуклость
+    const convexInfo = data ? data.convexity : calculateConvexityNumerically(func, expr);
     if (convexInfo) {
         props.push({ title: '11. Выпуклость', value: convexInfo.text, icon: '📉', desc: convexInfo.desc });
     }
 
+    // 12. Периодичность
     if (['sin', 'cos', 'tan', 'cot'].includes(type)) {
         const period = (type === 'tan' || type === 'cot') ? 'π' : '2π';
         props.push({ title: '12. Периодичность', value: `Периодическая (T=${period})`, icon: '⏱️', desc: 'Повторяется через промежуток' });
@@ -175,163 +347,14 @@ function analyzeFunctionProperties(expr, func, type) {
         props.push({ title: '12. Периодичность', value: 'Не периодическая', icon: '⏱️', desc: 'Не имеет периода' });
     }
 
-    const extremaInfo = getLocalExtremaValue(expr, func, type);
+    // 13. Локальные экстремумы
+    const extremaInfo = data ? data.localExtrema : calculateLocalExtremaNumerically(func, expr);
     props.push({ title: '13. Локальные экстремумы', value: extremaInfo.text, icon: '🏔️', desc: extremaInfo.desc });
 
     return props;
 }
 
-// === БАЗА ЗНАНИЙ: ТОЧНЫЕ ОТВЕТЫ ДЛЯ СТАНДАРТНЫХ ФУНКЦИЙ ===
-const ANALYTICAL_DATA = {
-    'linear_origin': {
-        range: '(-∞; +∞)',
-        sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
-        bounded: 'Не ограничена',
-        extremes: 'Не имеет (±∞)',
-        continuity: 'Непрерывна на всей области',
-        convexity: null,
-        monotonicity: 'Возрастает на всей области',
-        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' }
-    },
-    'quadratic_origin': {
-        range: '[0; +∞)',
-        sign: 'f(x)>0 при x∈(-∞; 0)∪(0; +∞); f(x)=0 при x=0',
-        bounded: 'Ограничена снизу',
-        extremes: 'min: 0 (при x=0), max: +∞',
-        continuity: 'Непрерывна на всей области',
-        convexity: { text: 'Выпукла вниз', desc: 'На всей области (a>0)' },
-        monotonicity: 'Убывает при x<0, возрастает при x>0',
-        localExtrema: { text: 'Минимум при x=0', desc: 'Единственная точка экстремума' }
-    },
-    'cubic_origin': {
-        range: '(-∞; +∞)',
-        sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
-        bounded: 'Не ограничена',
-        extremes: 'Не имеет (±∞)',
-        continuity: 'Непрерывна на всей области',
-        convexity: { text: 'Меняет выпуклость', desc: 'Перегиб в точке x=0' },
-        monotonicity: 'Возрастает на всей области',
-        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' }
-    },
-    'inverse': {
-        range: '(-∞; 0) ∪ (0; +∞)',
-        sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
-        bounded: 'Не ограничена',
-        extremes: 'Не имеет (±∞)',
-        continuity: 'Разрывна при x=0',
-        convexity: { text: 'Разная на промежутках', desc: 'Выпукла вниз при x>0, вверх при x<0' },
-        monotonicity: 'Убывает на (-∞; 0) и на (0; +∞)',
-        localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' }
-    },
-    'exp': {
-        range: '(0; +∞)',
-        sign: 'f(x)>0 при x∈(-∞; +∞)',
-        bounded: 'Ограничена снизу',
-        extremes: 'min: 0 (асимптота), max: +∞',
-        continuity: 'Непрерывна на всей области',
-        convexity: { text: 'Выпукла вниз', desc: 'На всей области' },
-        monotonicity: 'Возрастает на всей области',
-        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' }
-    },
-    'log': {
-        range: '(-∞; +∞)',
-        sign: 'f(x)>0 при x∈(1; +∞); f(x)<0 при x∈(0; 1)',
-        bounded: 'Не ограничена',
-        extremes: 'Не имеет (±∞)',
-        continuity: 'Непрерывна на (0; +∞)',
-        convexity: { text: 'Выпукла вверх', desc: 'На всей области' },
-        monotonicity: 'Возрастает на всей области',
-        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' }
-    },
-    'sin': {
-        range: '[-1; 1]',
-        sign: 'Периодически меняется знак',
-        bounded: 'Ограничена (сверху и снизу)',
-        extremes: 'min: -1, max: 1',
-        continuity: 'Непрерывна на всей области',
-        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
-        monotonicity: 'Не монотонна (периодическая)',
-        localExtrema: { text: 'Максимумы при π/2+2πn, Минимумы при -π/2+2πn', desc: 'Бесконечное кол-во' }
-    },
-    'cos': {
-        range: '[-1; 1]',
-        sign: 'Периодически меняется знак',
-        bounded: 'Ограничена (сверху и снизу)',
-        extremes: 'min: -1, max: 1',
-        continuity: 'Непрерывна на всей области',
-        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
-        monotonicity: 'Не монотонна (периодическая)',
-        localExtrema: { text: 'Максимумы при 2πn, Минимумы при π+2πn', desc: 'Бесконечное кол-во' }
-    },
-    'tan': {
-        range: '(-∞; +∞)',
-        sign: 'Периодически меняется знак',
-        bounded: 'Не ограничена',
-        extremes: 'Не имеет (±∞)',
-        continuity: 'Разрывна при x = π/2 + πn',
-        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
-        monotonicity: 'Не монотонна (периодическая)',
-        localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' }
-    },
-    'cot': {
-        range: '(-∞; +∞)',
-        sign: 'Периодически меняется знак',
-        bounded: 'Не ограничена',
-        extremes: 'Не имеет (±∞)',
-        continuity: 'Разрывна при x = πn',
-        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
-        monotonicity: 'Не монотонна (периодическая)',
-        localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' }
-    }
-};
-
-// === ФУНКЦИИ-ОБЁРТКИ: База знаний + Численный fallback ===
-
-function getRangeValue(expr, func, type) {
-    if (ANALYTICAL_DATA[type]) return ANALYTICAL_DATA[type].range;
-    // Численный fallback для остальных функций
-    return calculateRangeNumerically(func);
-}
-
-function getSignIntervalsValue(expr, func, type) {
-    if (ANALYTICAL_DATA[type]) return ANALYTICAL_DATA[type].sign;
-    return calculateSignIntervalsNumerically(func, expr);
-}
-
-function getBoundednessValue(expr, func, type) {
-    if (ANALYTICAL_DATA[type]) return ANALYTICAL_DATA[type].bounded;
-    return calculateBoundednessNumerically(func);
-}
-
-function getGlobalExtremesValue(expr, func, type) {
-    if (ANALYTICAL_DATA[type]) return ANALYTICAL_DATA[type].extremes;
-    return calculateExtremesNumerically(func);
-}
-
-function getContinuityValue(expr, type) {
-    if (ANALYTICAL_DATA[type]) return ANALYTICAL_DATA[type].continuity;
-    if (expr.includes('/x')) return 'Разрывна при x=0';
-    if (type === 'log') return 'Непрерывна на (0; +∞)';
-    return 'Непрерывна (предположительно)';
-}
-
-function getConvexityValue(expr, func, type) {
-    if (ANALYTICAL_DATA[type]) return ANALYTICAL_DATA[type].convexity;
-    return calculateConvexityNumerically(func, expr);
-}
-
-function getMonotonicityValue(expr, func, type) {
-    if (ANALYTICAL_DATA[type]) return ANALYTICAL_DATA[type].monotonicity;
-    return calculateMonotonicityNumerically(func);
-}
-
-function getLocalExtremaValue(expr, func, type) {
-    if (ANALYTICAL_DATA[type]) return ANALYTICAL_DATA[type].localExtrema;
-    return calculateLocalExtremaNumerically(func, expr);
-}
-
-// === ЧИСЛЕННЫЕ МЕТОДЫ (Fallback для нестандартных функций) ===
-
+// === ЧИСЛЕННЫЕ МЕТОДЫ (Fallback) ===
 function calculateRangeNumerically(func) {
     let min = Infinity, max = -Infinity;
     for (let x = -20; x <= 20; x += 0.1) {
@@ -446,7 +469,6 @@ function calculateLocalExtremaNumerically(func, expr) {
 }
 
 // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
-
 function getDomain(expr, type) {
     if (type === 'log') return '(0; +∞)';
     if (type === 'inverse' || expr.includes('/x')) return '(-∞; 0) ∪ (0; +∞)';
@@ -495,6 +517,12 @@ function checkParity(func, type) {
     if (Math.abs(a - b) < 0.001) return { result: 'Чётная', desc: 'Симметрия относительно OY' };
     if (Math.abs(a + b) < 0.001) return { result: 'Нечётная', desc: 'Симметрия относительно начала координат' };
     return { result: 'Общего вида', desc: 'Нет симметрии' };
+}
+
+function getContinuityValue(expr, type) {
+    if (expr.includes('/x')) return 'Разрывна при x=0';
+    if (type === 'log') return 'Непрерывна на (0; +∞)';
+    return 'Непрерывна (предположительно)';
 }
 
 function formatNumber(num) {
@@ -593,10 +621,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const slider = document.getElementById('xRange');
     const rangeVal = document.getElementById('rangeValue');
     slider.addEventListener('input', () => rangeVal.textContent = slider.value);
-    slider.addEventListener('change', () => { if(currentFunction) plotFunction(currentFunction, currentExpression, getFunctionType(currentExpression)); });
+    slider.addEventListener('change', () => { if(currentFunction) plotFunction(currentFunction, currentExpression, currentType); });
     document.getElementById('zoomInBtn').addEventListener('click', () => Plotly.relayout('plot', {'xaxis.range[0]': '*=0.8', 'xaxis.range[1]': '*=0.8'}));
     document.getElementById('zoomOutBtn').addEventListener('click', () => Plotly.relayout('plot', {'xaxis.range[0]': '*=1.2', 'xaxis.range[1]': '*=1.2'}));
-    document.getElementById('resetViewBtn').addEventListener('click', () => { if(currentFunction) plotFunction(currentFunction, currentExpression, getFunctionType(currentExpression)); });
+    document.getElementById('resetViewBtn').addEventListener('click', () => { if(currentFunction) plotFunction(currentFunction, currentExpression, currentType); });
     initializePlot();
 });
 
