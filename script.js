@@ -1,12 +1,12 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 4.0 - STABLE)
-// Использует метод временных меток для безопасного парсинга
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 4.1 - Clean Start)
+// Запуск только по действию пользователя
 // ============================================
 
 let currentFunction = null;
 let currentExpression = '';
 
-// --- ЯДРО: Парсер с временными метками (Ваше исправление) ---
+// --- ЯДРО: Парсер с временными метками ---
 function parseFunction(expr) {
     const displayExpr = expr;
     currentExpression = expr;
@@ -15,11 +15,10 @@ function parseFunction(expr) {
         evaluate: function(xVal) {
             try {
                 let processedExpr = expr
-                    .replace(/\s+/g, '') // Убираем пробелы
-                    .replace(/\^/g, '**'); // Степень
+                    .replace(/\s+/g, '') 
+                    .replace(/\^/g, '**'); 
 
-                // --- ЭТАП 1: Функции → временные метки ---
-                // Используем префикс __FN__ чтобы избежать конфликтов при замене 'e'
+                // ЭТАП 1: Функции → временные метки
                 processedExpr = processedExpr
                     .replace(/sin\(/g, '__FN_SIN__(')
                     .replace(/cos\(/g, '__FN_COS__(')
@@ -27,17 +26,16 @@ function parseFunction(expr) {
                     .replace(/log10\(/g, '__FN_LOG10__(')
                     .replace(/log\(/g, '__FN_LOG__(') 
                     .replace(/ln\(/g, '__FN_LN__(')
-                    .replace(/exp\(/g, '__FN_EXP__(') // Ключевая замена
+                    .replace(/exp\(/g, '__FN_EXP__(') 
                     .replace(/sqrt\(/g, '__FN_SQRT__(')
                     .replace(/abs\(/g, '__FN_ABS__(');
 
-                // --- ЭТАП 2: Константы и переменная ---
-                // Теперь замена 'e' безопасна — в метках __FN_EXP__ нет изолированной 'e'
+                // ЭТАП 2: Константы и переменная
                 processedExpr = processedExpr.replace(/\bpi\b/gi, 'Math.PI');
-                processedExpr = processedExpr.replace(/\be\b/g, 'Math.E'); // Заменяет только отдельную 'e'
-                processedExpr = processedExpr.replace(/\bx\b/g, `(${xVal})`); // Заменяет переменную x
+                processedExpr = processedExpr.replace(/\be\b/g, 'Math.E'); 
+                processedExpr = processedExpr.replace(/\bx\b/g, `(${xVal})`); 
                 
-                // --- ЭТАП 3: Восстановление функций → Math.функция ---
+                // ЭТАП 3: Восстановление функций
                 processedExpr = processedExpr
                     .replace(/__FN_SIN__\(/g, 'Math.sin(')
                     .replace(/__FN_COS__\(/g, 'Math.cos(')
@@ -49,7 +47,6 @@ function parseFunction(expr) {
                     .replace(/__FN_SQRT__\(/g, 'Math.sqrt(')
                     .replace(/__FN_ABS__\(/g, 'Math.abs(');
                 
-                // Выполнение
                 const result = new Function('return ' + processedExpr)();
                 
                 if (!isFinite(result) || isNaN(result)) return null;
@@ -71,7 +68,7 @@ function analyzeFunction() {
     let expr = input.value.trim();
     
     if (!expr) {
-        showError('Введите формулу функции');
+        showError('Пожалуйста, введите формулу функции');
         return;
     }
     
@@ -130,6 +127,7 @@ function analyzeFunction() {
 function analyzeFunctionProperties(expr, func) {
     const props = [];
     
+    // Иконка 📊 оставлена только здесь
     props.push({ title: 'Тип функции', value: determineFunctionType(expr), icon: '📊', desc: 'Классификация' });
     props.push({ title: 'Область определения', value: getDomain(expr), icon: '🌐', desc: 'D(f)' });
     
@@ -295,8 +293,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('zoomOutBtn').addEventListener('click', () => Plotly.relayout('plot', {'xaxis.range[0]': '*=1.2', 'xaxis.range[1]': '*=1.2'}));
     document.getElementById('resetViewBtn').addEventListener('click', () => { if(currentFunction) plotFunction(currentFunction, currentExpression); });
 
+    // Инициализация пустого графика
     initializePlot();
-    setTimeout(analyzeFunction, 500);
+    
+    // АВТОЗАПУСК ОТКЛЮЧЕН. Сайт ждет ввода пользователя.
 });
 
 function initializePlot() {

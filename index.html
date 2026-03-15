@@ -20,9 +20,9 @@
             <div class="input-card">
                 <h3>🔍 Ввод функции</h3>
                 <div class="input-area">
+                    <!-- Убрано value, теперь поле пустое -->
                     <input type="text" id="functionInput" 
-                           placeholder="Например: x^2 - 4 или exp(x)*sin(x)"
-                           value="exp(x)">
+                           placeholder="Например: x^2 - 4 или exp(x)*sin(x)">
                     <button id="calculateBtn" class="primary-btn">Анализировать</button>
                 </div>
                 
@@ -54,13 +54,14 @@
         <div class="main-content">
             <div class="properties-card">
                 <div class="card-header">
-                    <h3>📊 Свойства функции</h3>
+                    <!-- Иконка изменена на 📋 -->
+                    <h3>📋 Свойства функции</h3>
                     <div class="function-display" id="currentFunction">f(x) = ...</div>
                 </div>
                 <div id="propertiesOutput">
                     <div class="empty-state">
-                        <div class="empty-icon">📈</div>
-                        <p>Введите функцию для начала анализа</p>
+                        <div class="empty-icon">👈</div>
+                        <p>Введите функцию выше и нажмите «Анализировать»</p>
                     </div>
                 </div>
             </div>
