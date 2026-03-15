@@ -1,6 +1,6 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 5.1 - Tan/Cot Support)
-// Добавлена поддержка tan(x), cot(x) и улучшена отрисовка разрывов
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 5.2 - Final Fix)
+// Исправлен cot(x) и улучшена отрисовка тангенсоид
 // ============================================
 
 let currentFunction = null;
@@ -14,73 +14,24 @@ function parseFunction(expr) {
     return {
         evaluate: function(xVal) {
             try {
-                let processedExpr = expr
+                let cleanExpr = expr
                     .replace(/\s+/g, '') 
                     .replace(/\^/g, '**'); 
 
-                // ЭТАП 1: Функции → временные метки
-                // Добавлено support для cot
-                processedExpr = processedExpr
-                    .replace(/sin\(/g, '__FN_SIN__(')
-                    .replace(/cos\(/g, '__FN_COS__(')
-                    .replace(/tan\(/g, '__FN_TAN__(')
-                    .replace(/cot\(/g, '__FN_COT__(') // Поддержка котангенса
-                    .replace(/log10\(/g, '__FN_LOG10__(')
-                    .replace(/log\(/g, '__FN_LOG__(') 
-                    .replace(/ln\(/g, '__FN_LN__(')
-                    .replace(/exp\(/g, '__FN_EXP__(') 
-                    .replace(/sqrt\(/g, '__FN_SQRT__(')
-                    .replace(/abs\(/g, '__FN_ABS__(');
+                // ЭТАП 1: Специальная обработка COT перед остальными
+                // Заменяем cot(x) на (cos(x)/sin(x)) НАПРЯМУЮ, чтобы избежать проблем со скобками
+                // Используем цикл, чтобы заменить все вхождения, если их несколько (хотя вряд ли)
+                while (cleanExpr.includes('cot(')) {
+                    // Находим позицию cot(
+                    let start = cleanExpr.indexOf('cot(');
+                    // Ищем соответствующую закрывающую скобку. 
+                    // Для простоты школьных функций считаем, что внутри одна пара скобок или вложенность простая.
+                    // Но надежнее использовать замену через регулярку для простых случаев cot(что-то)
+                    // Регулярка: cot\(([^)]+)\) -> (cos($1)/sin($1))
+                    cleanExpr = cleanExpr.replace(/cot\(([^)]+)\)/g, '(Math.cos($1)/Math.sin($1))');
+                }
 
-                // ЭТАП 2: Константы и переменная
-                processedExpr = processedExpr.replace(/\bpi\b/gi, 'Math.PI');
-                processedExpr = processedExpr.replace(/\be\b/g, 'Math.E'); 
-                processedExpr = processedExpr.replace(/\bx\b/g, `(${xVal})`); 
-                
-                // ЭТАП 3: Восстановление функций
-                // cot(x) = 1 / tan(x) = cos(x) / sin(x)
-                processedExpr = processedExpr
-                    .replace(/__FN_SIN__\(/g, 'Math.sin(')
-                    .replace(/__FN_COS__\(/g, 'Math.cos(')
-                    .replace(/__FN_TAN__\(/g, 'Math.tan(')
-                    .replace(/__FN_COT__\(/g, '(1/Math.tan(') // Реализация котангенса
-                    .replace(/__FN_LOG10__\(/g, 'Math.log10(')
-                    .replace(/__FN_LOG__\(/g, 'Math.log(') 
-                    .replace(/__FN_LN__\(/g, 'Math.log(')
-                    .replace(/__FN_EXP__\(/g, 'Math.exp(')
-                    .replace(/__FN_SQRT__\(/g, 'Math.sqrt(')
-                    .replace(/__FN_ABS__\(/g, 'Math.abs(');
-                
-                // Закрываем скобку для котангенса, если она была открыта как (1/Math.tan(
-                // Но так как мы заменяем cot( на (1/Math.tan(, то закрывающая скобка от пользователя закроет tan, 
-                // а нам нужно закрыть всю конструкцию. 
-                // Хитрость: заменим __FN_COT__( на (1/Math.tan(, а потом в конце добавим обработку?
-                // Проще: cot(x) -> (Math.cos(x)/Math.sin(x))
-                
-                // ПЕРЕПИСЫВАЕМ ЗАМЕНУ COT ДЛЯ НАДЕЖНОСТИ:
-                // Вернемся к шагу 1 и сделаем замену на отношение
-                // Но чтобы не ломать логику, сделаем так:
-                // В шаге 3 заменим __FN_COT__( на (Math.cos(/Math.sin( ? Нет, сложно.
-                // Давайте проще: в шаге 1 заменим cot( на __FN_COT_START__ и будем хитрить.
-                
-                // ИСПРАВЛЕННЫЙ ПОДХОД ДЛЯ COT:
-                // Заменим в самом начале expr.replace(/cot\(/g, '(__FN_COS__/__FN_SIN__')
-                // Тогда скобка пользователя закроет знаменатель.
-                
-                // Возвращаемся к началу функции для корректной обработки cot
-                // (Перезапуск логики парсинга внутри этой функции для ясности)
-                
-                let cleanExpr = expr.replace(/\s+/g, '').replace(/\^/g, '**');
-                
-                // Специальная замена cot(x) -> (cos(x)/sin(x)) перед основными заменами
-                // Используем регулярку, которая захватывает содержимое скобок? Слишком сложно для вложенных.
-                // Простой вариант: заменим cot( на (1/tan(, но tan тоже надо обработать.
-                
-                // Самый надежный способ для школьного проекта:
-                cleanExpr = cleanExpr.replace(/cot\(/g, '(1/__FN_TAN__('); 
-                // Тогда потом __FN_TAN__( станет Math.tan(, и получится (1/Math.tan(...))
-                // Это сработает!
-                
+                // ЭТАП 2: Остальные функции → временные метки
                 cleanExpr = cleanExpr
                     .replace(/sin\(/g, '__FN_SIN__(')
                     .replace(/cos\(/g, '__FN_COS__(')
@@ -92,10 +43,12 @@ function parseFunction(expr) {
                     .replace(/sqrt\(/g, '__FN_SQRT__(')
                     .replace(/abs\(/g, '__FN_ABS__(');
 
+                // ЭТАП 3: Константы и переменная
                 cleanExpr = cleanExpr.replace(/\bpi\b/gi, 'Math.PI');
                 cleanExpr = cleanExpr.replace(/\be\b/g, 'Math.E'); 
                 cleanExpr = cleanExpr.replace(/\bx\b/g, `(${xVal})`); 
                 
+                // ЭТАП 4: Восстановление функций
                 cleanExpr = cleanExpr
                     .replace(/__FN_SIN__\(/g, 'Math.sin(')
                     .replace(/__FN_COS__\(/g, 'Math.cos(')
@@ -112,6 +65,7 @@ function parseFunction(expr) {
                 if (!isFinite(result) || isNaN(result)) return null;
                 return result;
             } catch(e) {
+                // console.error("Ошибка вычисления:", e.message, "Выражение:", expr);
                 return null;
             }
         },
@@ -139,13 +93,23 @@ function analyzeFunction() {
             
             // Тестовый запуск
             let isValid = false;
-            // Для тангенса и котангенса нужны особые точки проверки
-            const isTrigTan = expr.toLowerCase().includes('tan') || expr.toLowerCase().includes('cot');
-            const testPoints = isTrigTan ? [0.1, 0.5, 1, 2] : (expr.toLowerCase().includes('log') ? [1, 2, Math.E, 10] : [-2, -1, 0, 1, 2]);
+            const lower = expr.toLowerCase();
+            
+            // Подбираем тестовые точки
+            let testPoints = [];
+            if (lower.includes('tan') || lower.includes('cot')) {
+                testPoints = [0.1, 0.5, 1.0, 2.0]; // Избегаем 0 для cot и pi/2 для tan
+            } else if (lower.includes('log')) {
+                testPoints = [1, 2, Math.E, 10];
+            } else {
+                testPoints = [-2, -1, 0, 1, 2];
+            }
             
             for (let x of testPoints) {
                 if (func.evaluate(x) !== null) { isValid = true; break; }
             }
+            
+            // Если не прошло, пробуем еще
             if (!isValid) {
                 for (let x of [0.1, 0.5, 3, 5, -0.5]) {
                     if (func.evaluate(x) !== null) { isValid = true; break; }
@@ -292,7 +256,11 @@ function findMonotonicity(func, expr) {
     const points = [-5, -1, 1, 5];
     
     for (let x of points) {
-        if ((expr.toLowerCase().includes('tan') || expr.toLowerCase().includes('cot') || expr.includes('/x')) && Math.abs(x % (Math.PI/2)) < 0.2) continue;
+        // Пропуск точек near асимптот
+        if (expr.toLowerCase().includes('tan') || expr.toLowerCase().includes('cot')) {
+             if (Math.abs(Math.cos(x)) < 0.2 || Math.abs(Math.sin(x)) < 0.2) continue;
+        }
+        if (expr.includes('/x') && Math.abs(x) < 0.2) continue;
         
         const y1 = func.evaluate(x);
         const y2 = func.evaluate(x + 0.1);
@@ -315,10 +283,11 @@ function findSignIntervals(func, expr) {
     let pos = [], neg = [];
     for (let i = 0; i < points.length - 1; i++) {
         let mid = (points[i] + points[i+1]) / 2;
-        if (expr.includes('/x') || expr.toLowerCase().includes('tan') || expr.toLowerCase().includes('cot')) {
-             // Пропуск опасных зон
-             if (Math.abs(mid) < 0.1 || Math.abs(mid % (Math.PI/2)) < 0.2) continue;
-        }
+        
+        // Пропуск опасных зон
+        if (expr.includes('/x') && Math.abs(mid) < 0.1) continue;
+        if (expr.toLowerCase().includes('tan') && Math.abs(Math.cos(mid)) < 0.2) continue;
+        if (expr.toLowerCase().includes('cot') && Math.abs(Math.sin(mid)) < 0.2) continue;
         
         const val = func.evaluate(mid);
         if (val !== null) {
@@ -389,7 +358,7 @@ function checkConvexity(func, expr) {
     for (let x of points) {
         if (expr.includes('/x') && Math.abs(x) < 1) continue;
         if (expr.toLowerCase().includes('tan') || expr.toLowerCase().includes('cot')) {
-             if (Math.abs(x % (Math.PI/2)) < 0.5) continue;
+             if (Math.abs(Math.cos(x)) < 0.5 || Math.abs(Math.sin(x)) < 0.5) continue;
         }
 
         const y_m = func.evaluate(x - h);
@@ -415,7 +384,7 @@ function findLocalExtrema(func, expr) {
     const range = 10;
     const lower = expr.toLowerCase();
     
-    // Тангенс и котангенс не имеют локальных экстремумов
+    // Тангенс, котангенс, синус, косинус, логарифм, 1/x не имеют локальных экстремумов в классическом смысле на всей области
     if (expr === 'x' || expr === '1/x' || lower.includes('log') || lower.includes('tan') || lower.includes('cot') || lower.includes('sin') || lower.includes('cos')) {
         return [];
     }
@@ -444,9 +413,10 @@ function findZeros(func, expr) {
     
     if (lower.includes('exp')) return [];
     if (expr === '1/x') return [];
-    // Нули котангенса: pi/2 + pi*n. Нули тангенса: pi*n
-    if (lower.includes('cot')) return [1.57, -1.57, 4.71]; // Приближенно pi/2
-    if (lower.includes('tan')) return [0, 3.14, -3.14]; // Приближенно pi
+    
+    // Аналитические нули для тригонометрии
+    if (lower.includes('cot')) return [1.57, -1.57, 4.71, -4.71]; // pi/2 + pi*n
+    if (lower.includes('tan')) return [0, 3.14, -3.14, 6.28, -6.28]; // pi*n
 
     for (let x = -10; x <= 10; x += step) {
         if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
@@ -504,61 +474,72 @@ function formatNumber(num) {
     return Number(num.toFixed(2)).toString();
 }
 
-// --- ГРАФИК (С УЛУЧШЕННОЙ ОБРАБОТКОЙ РАЗРЫВОВ) ---
+// --- ГРАФИК (ИСПРАВЛЕННЫЙ ДЛЯ TAN/COT) ---
 function plotFunction(func, expr) {
     const range = parseInt(document.getElementById('xRange').value);
-    const step = range / 400; // Увеличим детализацию для тангенса
+    const step = range / 500; // Очень мелкий шаг для плавности
     const xVals = [], yVals = [];
     let startX = -range, endX = range;
     
     if (expr.toLowerCase().includes('log')) startX = 0.01;
 
-    let lastY = null;
+    const lower = expr.toLowerCase();
+    const isTan = lower.includes('tan');
+    const isCot = lower.includes('cot');
 
     for (let x = startX; x <= endX; x += step) {
-        // Пропуск точек вблизи разрывов для тангенса и котангенса
-        const lower = expr.toLowerCase();
         let skip = false;
-        
-        if (lower.includes('tan')) {
-            // Разрывы в pi/2 + pi*n (~1.57, 4.71...)
-            const distToAsymptote = Math.abs((x - Math.PI/2) % Math.PI);
-            if (distToAsymptote < 0.1 || distToAsymptote > Math.PI - 0.1) skip = true;
-        }
-        if (lower.includes('cot')) {
-            // Разрывы в pi*n (~0, 3.14...)
-            const distToAsymptote = Math.abs(x % Math.PI);
-            if (distToAsymptote < 0.1 || distToAsymptote > Math.PI - 0.1) skip = true;
-        }
-        if (expr.includes('/x') && Math.abs(x) < 0.05) skip = true;
+        let y = null;
 
-        if (skip) {
+        // 1. Принудительный разрыв возле асимптот
+        if (isTan) {
+            // Асимптоты tan: pi/2 + pi*n (~1.57, 4.71...)
+            // Проверяем расстояние до ближайшей асимптоты
+            let dist = Math.abs((x - Math.PI/2) % Math.PI);
+            if (dist > Math.PI/2) dist = Math.PI - dist;
+            if (dist < 0.15) skip = true; // Зона разрыва
+        } else if (isCot) {
+            // Асимптоты cot: pi*n (~0, 3.14...)
+            let dist = Math.abs(x % Math.PI);
+            if (dist > Math.PI/2) dist = Math.PI - dist;
+            if (dist < 0.15) skip = true; // Зона разрыва
+        } else if (expr.includes('/x') && Math.abs(x) < 0.05) {
+            skip = true;
+        }
+
+        if (!skip) {
+            y = func.evaluate(x);
+        }
+
+        // 2. Обрезка по Y для визуализации
+        // Если значение слишком большое, считаем это разрывом
+        if (y !== null && (Math.abs(y) > 100 || !isFinite(y))) {
+            y = null;
+        }
+
+        if (skip || y === null) {
             xVals.push(x);
-            yVals.push(null); // Разрыв
-            lastY = null;
-            continue;
-        }
-
-        const y = func.evaluate(x);
-        
-        if (y !== null && isFinite(y) && Math.abs(y) < 2000) { // Ограничение по Y для красивого графика
+            yVals.push(null); // Разрыв линии
+        } else {
             xVals.push(x);
             yVals.push(y);
-            lastY = y;
-        } else {
-            // Если значение слишком большое (асимптота), делаем разрыв
-            xVals.push(x);
-            yVals.push(null);
-            lastY = null;
         }
     }
     
     const trace = { x: xVals, y: yVals, mode: 'lines', line: { color: '#2c3e50', width: 3 } };
+    
+    // Автоматическое ограничение оси Y, чтобы график не сплющивало
+    let yRange = null;
+    if (isTan || isCot || expr === '1/x') {
+        yRange = [-10, 10]; // Фиксируем вид для разрывных функций
+    }
+
     const layout = {
         margin: { t: 30, r: 20, b: 40, l: 40 },
         xaxis: { title: 'X', zeroline: true, gridcolor: '#eee', range: [startX, endX] },
-        yaxis: { title: 'Y', zeroline: true, gridcolor: '#eee' },
-        paper_bgcolor: '#fff', plot_bgcolor: '#fff'
+        yaxis: { title: 'Y', zeroline: true, gridcolor: '#eee', range: yRange },
+        paper_bgcolor: '#fff',
+        plot_bgcolor: '#fff'
     };
     
     Plotly.react('plot', [trace], layout, {displayModeBar: false});
