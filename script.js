@@ -1,6 +1,6 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 2.0)
-// Исправлена ошибка с exp(x) и улучшена логика
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 3.0 - FIX)
+// Исправлена критическая ошибка с заменой 'e' в 'exp'
 // ============================================
 
 let currentFunction = null;
@@ -15,34 +15,44 @@ function parseFunction(expr) {
         evaluate: function(xVal) {
             try {
                 let processedExpr = expr
-                    .replace(/\s+/g, '') // Убираем пробелы
-                    .replace(/\^/g, '**'); // ^ в степень
-                
-                // 1. ЗАМЕНА ФУНКЦИЙ (до замены x!)
+                    .replace(/\s+/g, '') // 1. Убираем пробелы
+                    .replace(/\^/g, '**'); // 2. Степень ^ в **
+
+                // 3. ЗАМЕНА ФУНКЦИЙ (Самое важное: делаем это ПЕРВЫМ)
+                // Мы заменяем полные имена функций на Math.функция
                 processedExpr = processedExpr
                     .replace(/sin\(/g, 'Math.sin(')
                     .replace(/cos\(/g, 'Math.cos(')
                     .replace(/tan\(/g, 'Math.tan(')
                     .replace(/log10\(/g, 'Math.log10(')
-                    .replace(/log\(/g, 'Math.log(') // ln
+                    .replace(/log\(/g, 'Math.log(') 
                     .replace(/ln\(/g, 'Math.log(')
-                    .replace(/exp\(/g, 'Math.exp(') // exp
+                    .replace(/exp\(/g, 'Math.exp(') // exp( -> Math.exp(
                     .replace(/sqrt\(/g, 'Math.sqrt(')
-                    .replace(/abs\(/g, 'Math.abs(')
-                    .replace(/pi/gi, 'Math.PI')
-                    .replace(/e/gi, 'Math.E');
+                    .replace(/abs\(/g, 'Math.abs(');
 
-                // 2. ЗАМЕНА ПЕРЕМЕННОЙ X (Только если x стоит отдельно!)
-                // \b означает границу слова. Так мы не сломаем "Math.exp"
-                // Заменяем 'x' на значение, но только если это переменная
+                // 4. ЗАМЕНА КОНСТАНТ (ОЧЕНЬ ВАЖНО: используем \b для границ слова)
+                // Заменяем 'pi' на Math.PI
+                processedExpr = processedExpr.replace(/\bpi\b/gi, 'Math.PI');
+                
+                // Заменяем 'e' на Math.E, ТОЛЬКО если это отдельная буква!
+                // \b означает границу слова. 
+                // В слове "Math.exp" буква 'e' не имеет границы слева (там точка), поэтому она НЕ заменится.
+                // А в выражении "2*e" или "e^x" буква 'e' заменится корректно.
+                processedExpr = processedExpr.replace(/\be\b/g, 'Math.E');
+
+                // 5. ЗАМЕНА ПЕРЕМЕННОЙ X
+                // Заменяем 'x' только если это отдельная переменная
                 processedExpr = processedExpr.replace(/\bx\b/g, `(${xVal})`);
                 
                 // Выполняем вычисление
+                // console.log("Вычисляю выражение:", processedExpr); // Для отладки можно включить
                 const result = new Function('return ' + processedExpr)();
                 
                 if (!isFinite(result) || isNaN(result)) return null;
                 return result;
             } catch(e) {
+                console.error("Ошибка вычисления:", e.message, "Выражение:", expr);
                 return null;
             }
         },
@@ -64,46 +74,58 @@ function analyzeFunction() {
     
     showLoading();
     
-    try {
-        const func = parseFunction(expr);
-        
-        // Тестовый запуск для проверки валидности
-        let isValid = false;
-        const testPoints = expr.includes('log') ? [1, 2, Math.E] : [-1, 0, 1, 2];
-        
-        for (let x of testPoints) {
-            if (func.evaluate(x) !== null) {
-                isValid = true;
-                break;
+    // Небольшая задержка, чтобы интерфейс успел обновиться
+    setTimeout(() => {
+        try {
+            const func = parseFunction(expr);
+            
+            // Тестовый запуск для проверки валидности
+            let isValid = false;
+            // Подбираем тестовые точки в зависимости от наличия логарифмов
+            const testPoints = expr.toLowerCase().includes('log') ? [1, 2, Math.E, 10] : [-2, -1, 0, 1, 2];
+            
+            for (let x of testPoints) {
+                const val = func.evaluate(x);
+                if (val !== null && isFinite(val)) {
+                    isValid = true;
+                    break;
+                }
             }
-        }
-        
-        if (!isValid && !expr.includes('sqrt') && !expr.includes('log')) {
-             // Если функция сложная, пробуем еще точки
-             if (func.evaluate(0.5) !== null) isValid = true;
-        }
+            
+            // Если не прошло по стандартным точкам, пробуем еще несколько для сложных функций
+            if (!isValid) {
+                const extraPoints = [0.1, 0.5, 3, 5, -0.5];
+                for (let x of extraPoints) {
+                    if (func.evaluate(x) !== null) {
+                        isValid = true;
+                        break;
+                    }
+                }
+            }
 
-        if (!isValid) {
-            throw new Error('Функция не определена в стандартной области или содержит ошибку синтаксиса.');
+            if (!isValid) {
+                throw new Error('Функция не определена в стандартной области или содержит ошибку синтаксиса.');
+            }
+            
+            currentFunction = func;
+            document.getElementById('currentFunction').textContent = `f(x) = ${expr}`;
+            document.getElementById('graphStatus').textContent = 'Анализ свойств...';
+            
+            // Запуск анализа свойств
+            const properties = analyzeFunctionProperties(expr, func);
+            updatePropertiesDisplay(properties);
+            
+            // Построение графика
+            document.getElementById('graphStatus').textContent = 'Построение графика...';
+            plotFunction(func, expr);
+            document.getElementById('graphStatus').textContent = 'Готово';
+            
+        } catch (error) {
+            console.error(error);
+            showError(`Ошибка: ${error.message}. Проверьте синтаксис (например, используйте * для умножения: 2*x).`);
+            document.getElementById('graphStatus').textContent = 'Ошибка';
         }
-        
-        currentFunction = func;
-        document.getElementById('currentFunction').textContent = `f(x) = ${expr}`;
-        document.getElementById('graphStatus').textContent = 'Анализ...';
-        
-        // Запуск анализа свойств
-        const properties = analyzeFunctionProperties(expr, func);
-        updatePropertiesDisplay(properties);
-        
-        // Построение графика
-        plotFunction(func, expr);
-        document.getElementById('graphStatus').textContent = 'Готово';
-        
-    } catch (error) {
-        console.error(error);
-        showError(`Ошибка: ${error.message}. Проверьте синтаксис (например, используйте * для умножения).`);
-        document.getElementById('graphStatus').textContent = 'Ошибка';
-    }
+    }, 50);
 }
 
 // --- АНАЛИЗ СВОЙСТВ ---
@@ -118,7 +140,7 @@ function analyzeFunctionProperties(expr, func) {
         desc: 'Классификация'
     });
     
-    // 2. Область определения (упрощенно)
+    // 2. Область определения
     props.push({
         title: 'Область определения (D(f))',
         value: getDomain(expr),
@@ -126,7 +148,7 @@ function analyzeFunctionProperties(expr, func) {
         desc: 'Допустимые значения X'
     });
     
-    // 3. Нули функции (корни)
+    // 3. Нули функции
     const zeros = findZeros(func, expr);
     props.push({
         title: 'Нули функции (f(x)=0)',
@@ -137,7 +159,7 @@ function analyzeFunctionProperties(expr, func) {
     
     // 4. Пересечение с OY
     const y0 = func.evaluate(0);
-    if (y0 !== null) {
+    if (y0 !== null && isFinite(y0)) {
         props.push({
             title: 'Пересечение с осью Y',
             value: `(0; ${y0.toFixed(2)})`,
@@ -146,7 +168,7 @@ function analyzeFunctionProperties(expr, func) {
         });
     }
     
-    // 5. Экстремумы (численный поиск)
+    // 5. Экстремумы
     const extrema = findExtrema(func, expr);
     if (extrema.length > 0) {
         const extStr = extrema.map(e => `${e.type === 'max' ? 'Макс' : 'Мин'} в x=${e.x.toFixed(2)}`).join('; ');
@@ -169,14 +191,14 @@ function analyzeFunctionProperties(expr, func) {
     return props;
 }
 
-// Поиск экстремумов (через производную численно)
+// Поиск экстремумов (численный поиск через производную)
 function findExtrema(func, expr) {
     const extrema = [];
     const step = 0.1;
     const range = 10;
     
-    // Не ищем экстремумы у простых линейных или разрывных в 0 функциях без нужды
-    if (expr === 'x' || expr === '1/x') return [];
+    // Пропускаем поиск для заведомо монотонных или простых функций для скорости
+    if (expr === 'x' || expr === '1/x' || expr.toLowerCase().includes('log')) return [];
 
     for (let x = -range; x < range; x += step) {
         const y1 = func.evaluate(x);
@@ -185,48 +207,50 @@ function findExtrema(func, expr) {
         
         if (y1 === null || y2 === null || y3 === null) continue;
         
-        // Проверка на смену направления (производная меняет знак)
+        // Проверка смены знака производной
         const d1 = y2 - y1;
         const d2 = y3 - y2;
         
-        if (d1 > 0 && d2 < 0) {
+        if (d1 > 0.001 && d2 < -0.001) {
             extrema.push({ x: x + step, type: 'max' });
-        } else if (d1 < 0 && d2 > 0) {
+        } else if (d1 < -0.001 && d2 > 0.001) {
             extrema.push({ x: x + step, type: 'min' });
         }
     }
     return extrema;
 }
 
-// Вспомогательные функции (типы, домен, корни, четность)
+// Вспомогательные функции
 function determineFunctionType(expr) {
-    expr = expr.toLowerCase();
-    if (expr.includes('sin') || expr.includes('cos')) return 'Тригонометрическая';
-    if (expr.includes('exp')) return 'Показательная';
-    if (expr.includes('log')) return 'Логарифмическая';
-    if (expr.includes('/x')) return 'Дробно-рациональная';
-    if (expr.includes('**2') || expr.includes('^2')) return 'Квадратичная';
-    if (expr.includes('**3') || expr.includes('^3')) return 'Кубическая';
+    const lower = expr.toLowerCase();
+    if (lower.includes('sin') || lower.includes('cos') || lower.includes('tan')) return 'Тригонометрическая';
+    if (lower.includes('exp')) return 'Показательная (экспонента)';
+    if (lower.includes('log')) return 'Логарифмическая';
+    if (lower.includes('/x')) return 'Дробно-рациональная';
+    if (lower.includes('**2') || lower.includes('^2')) return 'Квадратичная';
+    if (lower.includes('**3') || lower.includes('^3')) return 'Кубическая';
     return 'Алгебраическая / Смешанная';
 }
 
 function getDomain(expr) {
-    expr = expr.toLowerCase();
-    if (expr.includes('log')) return '(0; +∞)';
-    if (expr.includes('sqrt')) return '[0; +∞)';
-    if (expr.includes('/x')) return '(-∞; 0) U (0; +∞)';
+    const lower = expr.toLowerCase();
+    if (lower.includes('log')) return '(0; +∞)';
+    if (lower.includes('sqrt')) return '[0; +∞)';
+    if (lower.includes('/x')) return '(-∞; 0) ∪ (0; +∞)';
     return '(-∞; +∞)';
 }
 
 function findZeros(func, expr) {
     const zeros = [];
     const step = 0.1;
-    // Особые случаи
+    
+    // Особые случаи для скорости и точности
     if (expr === 'x**2' || expr === 'x^2') return ['0'];
-    if (expr.includes('exp')) return []; // Экспонента не равна 0
+    if (expr.toLowerCase().includes('exp')) return []; // Экспонента > 0
     if (expr === '1/x') return [];
     
     for (let x = -10; x <= 10; x += step) {
+        // Пропуск точки разрыва
         if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
         
         const y1 = func.evaluate(x);
@@ -243,38 +267,40 @@ function findZeros(func, expr) {
 function checkParity(func) {
     const a = func.evaluate(1);
     const b = func.evaluate(-1);
-    if (a === null || b === null) return { result: 'Не определено', desc: '' };
+    if (a === null || b === null) return { result: 'Не определено', desc: 'Невозможно проверить симметрию' };
     
-    if (Math.abs(a - b) < 0.001) return { result: 'Чётная', desc: 'Симметрия относительно OY' };
-    if (Math.abs(a + b) < 0.001) return { result: 'Нечётная', desc: 'Симметрия относительно начала координат' };
+    if (Math.abs(a - b) < 0.001) return { result: 'Чётная', desc: 'График симметричен относительно оси Y' };
+    if (Math.abs(a + b) < 0.001) return { result: 'Нечётная', desc: 'График симметричен относительно начала координат' };
     return { result: 'Общего вида', desc: 'Нет симметрии' };
 }
 
 // --- ОТРИСОВКА ГРАФИКА ---
 function plotFunction(func, expr) {
     const range = parseInt(document.getElementById('xRange').value);
-    const step = range / 300; // Высокая детализация
+    const step = range / 300; 
     
     const xVals = [], yVals = [];
     let startX = -range, endX = range;
     
-    // Коррекция диапазона для логарифмов
+    // Коррекция для логарифмов
     if (expr.toLowerCase().includes('log')) startX = 0.01;
 
     for (let x = startX; x <= endX; x += step) {
-        // Разрывы для 1/x
+        // Обработка разрывов (например, 1/x)
         if (expr.includes('/x') && Math.abs(x) < 0.05) {
             xVals.push(x); yVals.push(null);
             continue;
         }
         
         const y = func.evaluate(x);
-        if (y !== null && Math.abs(y) < 1000) { // Обрезаем слишком большие значения
+        
+        // Отсекаем слишком большие значения, чтобы график не ломался
+        if (y !== null && Math.abs(y) < 1000) {
             xVals.push(x);
             yVals.push(y);
         } else {
             xVals.push(x);
-            yVals.push(null); // Разрыв линии
+            yVals.push(null); // Разрыв линии графика
         }
     }
     
@@ -348,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // Зум
+    // Зум и диапазон
     const slider = document.getElementById('xRange');
     const rangeVal = document.getElementById('rangeValue');
     
@@ -369,6 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Старт
     initializePlot();
+    // Автозапуск с примером
     setTimeout(analyzeFunction, 500);
 });
 
