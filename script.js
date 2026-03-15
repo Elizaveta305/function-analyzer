@@ -7,7 +7,7 @@ let currentFunction = null;
 let currentExpression = '';
 let currentType = 'unknown';
 
-// --- ЯДРО: Парсер (ИСПРАВЛЕННЫЙ ДЛЯ COT) ---
+// --- ЯДРО: Парсер (ИСПРАВЛЕННЫЙ - с хелпером для cot) ---
 function parseFunction(expr) {
     const displayExpr = expr;
     currentExpression = expr;
@@ -17,10 +17,16 @@ function parseFunction(expr) {
             try {
                 let cleanExpr = expr.replace(/\s+/g, '').replace(/\^/g, '**');
                 
-                // 🔧 ШАГ 1: Прячем cot( во временный плейсхолдер
-                cleanExpr = cleanExpr.replace(/cot\(/g, '__COT_TMP__(');
+                // 🔧 Хелпер для котангенса
+                const __COT__ = (x) => {
+                    const s = Math.sin(x);
+                    return Math.abs(s) < 1e-10 ? NaN : Math.cos(x) / s;
+                };
+                
+                // Заменяем cot( на __COT__(
+                cleanExpr = cleanExpr.replace(/cot\(/g, '__COT__(');
 
-                // ШАГ 2: Заменяем все функции на плейсхолдеры
+                // Заменяем все функции на плейсхолдеры
                 cleanExpr = cleanExpr
                     .replace(/sin\(/g, '__FN_SIN__(')
                     .replace(/cos\(/g, '__FN_COS__(')
@@ -32,12 +38,12 @@ function parseFunction(expr) {
                     .replace(/sqrt\(/g, '__FN_SQRT__(')
                     .replace(/abs\(/g, '__FN_ABS__(');
 
-                // ШАГ 3: Константы и переменная
+                // Константы и переменная
                 cleanExpr = cleanExpr.replace(/\bpi\b/gi, 'Math.PI');
                 cleanExpr = cleanExpr.replace(/\be\b/g, 'Math.E'); 
                 cleanExpr = cleanExpr.replace(/\bx\b/g, `(${xVal})`); 
                 
-                // ШАГ 4: Восстанавливаем стандартные функции Math.*
+                // Восстанавливаем стандартные функции Math.*
                 cleanExpr = cleanExpr
                     .replace(/__FN_SIN__\(/g, 'Math.sin(')
                     .replace(/__FN_COS__\(/g, 'Math.cos(')
@@ -49,13 +55,13 @@ function parseFunction(expr) {
                     .replace(/__FN_SQRT__\(/g, 'Math.sqrt(')
                     .replace(/__FN_ABS__\(/g, 'Math.abs(');
                 
-                // 🔧 ШАГ 5: Теперь безопасно раскрываем котангенс
-                cleanExpr = cleanExpr.replace(/__COT_TMP__\(([^)]+)\)/g, '(Math.cos($1)/Math.sin($1))');
+                // Выполняем с передачей __COT__ в контекст
+                const result = new Function('__COT__', 'return ' + cleanExpr)(__COT__);
                 
-                const result = new Function('return ' + cleanExpr)();
                 if (!isFinite(result) || isNaN(result)) return null;
                 return result;
             } catch(e) {
+                console.error('Ошибка:', e.message);
                 return null;
             }
         },
