@@ -1,13 +1,13 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 6.4 - Final toFixed Fix)
-// Полная защита от ошибки toFixed
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 6.4 - Fixed Cot)
+// 13 свойств + исправленный котангенс
 // ============================================
 
 let currentFunction = null;
 let currentExpression = '';
 let currentType = 'unknown';
 
-// --- ЯДРО: Парсер ---
+// --- ЯДРО: Парсер (ИСПРАВЛЕННЫЙ ДЛЯ COT) ---
 function parseFunction(expr) {
     const displayExpr = expr;
     currentExpression = expr;
@@ -17,10 +17,10 @@ function parseFunction(expr) {
             try {
                 let cleanExpr = expr.replace(/\s+/g, '').replace(/\^/g, '**');
                 
-                while (cleanExpr.includes('cot(')) {
-                    cleanExpr = cleanExpr.replace(/cot\(([^)]+)\)/g, '(Math.cos($1)/Math.sin($1))');
-                }
+                // 🔧 ШАГ 1: Прячем cot( во временный плейсхолдер
+                cleanExpr = cleanExpr.replace(/cot\(/g, '__COT_TMP__(');
 
+                // ШАГ 2: Заменяем все функции на плейсхолдеры
                 cleanExpr = cleanExpr
                     .replace(/sin\(/g, '__FN_SIN__(')
                     .replace(/cos\(/g, '__FN_COS__(')
@@ -32,10 +32,12 @@ function parseFunction(expr) {
                     .replace(/sqrt\(/g, '__FN_SQRT__(')
                     .replace(/abs\(/g, '__FN_ABS__(');
 
+                // ШАГ 3: Константы и переменная
                 cleanExpr = cleanExpr.replace(/\bpi\b/gi, 'Math.PI');
                 cleanExpr = cleanExpr.replace(/\be\b/g, 'Math.E'); 
                 cleanExpr = cleanExpr.replace(/\bx\b/g, `(${xVal})`); 
                 
+                // ШАГ 4: Восстанавливаем стандартные функции Math.*
                 cleanExpr = cleanExpr
                     .replace(/__FN_SIN__\(/g, 'Math.sin(')
                     .replace(/__FN_COS__\(/g, 'Math.cos(')
@@ -46,6 +48,9 @@ function parseFunction(expr) {
                     .replace(/__FN_EXP__\(/g, 'Math.exp(')
                     .replace(/__FN_SQRT__\(/g, 'Math.sqrt(')
                     .replace(/__FN_ABS__\(/g, 'Math.abs(');
+                
+                // 🔧 ШАГ 5: Теперь безопасно раскрываем котангенс
+                cleanExpr = cleanExpr.replace(/__COT_TMP__\(([^)]+)\)/g, '(Math.cos($1)/Math.sin($1))');
                 
                 const result = new Function('return ' + cleanExpr)();
                 if (!isFinite(result) || isNaN(result)) return null;
@@ -92,7 +97,7 @@ function getFunctionType(expr) {
 // === БАЗА ЗНАНИЙ ===
 const ANALYTICAL_DATA = {
     'linear_origin': {
-        range: '(-∞; +∞)',
+        range: '(-∞; +)',
         sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
         bounded: 'Не ограничена',
         extremes: 'Не имеет (±∞)',
@@ -126,7 +131,7 @@ const ANALYTICAL_DATA = {
         convexity: { text: 'Меняет выпуклость', desc: 'Перегиб в точке x=0' },
         monotonicity: 'Возрастает на всей области',
         localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
-        domain: '(-∞; +∞)',
+        domain: '(-∞; +)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
         zeros: [0]
     },
@@ -145,7 +150,7 @@ const ANALYTICAL_DATA = {
     },
     'exp': {
         range: '(0; +∞)',
-        sign: 'f(x)>0 при x∈(-∞; +∞)',
+        sign: 'f(x)>0 при x∈(-∞; +)',
         bounded: 'Ограничена снизу',
         extremes: 'min: 0 (асимптота), max: +∞',
         continuity: 'Непрерывна на всей области',
@@ -178,7 +183,7 @@ const ANALYTICAL_DATA = {
         convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
         monotonicity: 'Не монотонна (периодическая)',
         localExtrema: { text: 'Максимумы при π/2+2πn, Минимумы при -π/2+2πn', desc: 'Бесконечное кол-во' },
-        domain: '(-∞; +∞)',
+        domain: '(-∞; +)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
         zeros: [0, 3.14, -3.14, 6.28, -6.28]
     },
@@ -209,7 +214,7 @@ const ANALYTICAL_DATA = {
         zeros: [0, 3.14, -3.14, 6.28, -6.28]
     },
     'cot': {
-        range: '(-∞; +∞)',
+        range: '(-∞; +)',
         sign: 'Периодически меняется знак',
         bounded: 'Не ограничена',
         extremes: 'Не имеет (±∞)',
@@ -240,9 +245,6 @@ function analyzeFunction() {
             const func = parseFunction(expr);
             const type = getFunctionType(expr);
             currentType = type;
-            
-            console.log('Выражение:', expr);
-            console.log('Распознанный тип:', type);
             
             let isValid = false;
             let testPoints = [];
@@ -281,7 +283,7 @@ function analyzeFunction() {
     }, 50);
 }
 
-// === АНАЛИЗ СВОЙСТВ ===
+// === АНАЛИЗ 13 СВОЙСТВ ===
 function analyzeFunctionProperties(expr, func, type) {
     const props = [];
     const data = ANALYTICAL_DATA[type];
@@ -327,7 +329,7 @@ function analyzeFunctionProperties(expr, func, type) {
     return props;
 }
 
-// === ИСПРАВЛЕННАЯ ФУНКЦИЯ formatNumber ===
+// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
 function formatNumber(num) {
     if (num === null || num === undefined) return '0';
     const number = typeof num === 'string' ? parseFloat(num) : Number(num);
@@ -336,14 +338,12 @@ function formatNumber(num) {
     return number.toFixed(2);
 }
 
-// === БЕЗОПАСНАЯ ФУНКЦИЯ для toFixed ===
 function safeToFixed(value, decimals = 1) {
     const num = typeof value === 'string' ? parseFloat(value) : Number(value);
     if (isNaN(num)) return String(value);
     return num.toFixed(decimals);
 }
 
-// === ЧИСЛЕННЫЕ МЕТОДЫ ===
 function calculateRangeNumerically(func) {
     let min = Infinity, max = -Infinity;
     for (let x = -20; x <= 20; x += 0.1) {
@@ -367,13 +367,11 @@ function calculateSignIntervalsNumerically(func, expr) {
         return 'Не определено';
     }
     let pos = [], neg = [];
-    // ИСПРАВЛЕНО: явно конвертируем все значения в числа
     let points = [-10, ...zeros.map(z => Number(z)), 10];
     for (let i = 0; i < points.length - 1; i++) {
         let mid = (points[i] + points[i+1]) / 2;
         const val = func.evaluate(mid);
         if (val !== null) {
-            // ИСПРАВЛЕНО: используем safeToFixed
             if (val > 0) pos.push(`(${safeToFixed(points[i])}; ${safeToFixed(points[i+1])})`);
             else neg.push(`(${safeToFixed(points[i])}; ${safeToFixed(points[i+1])})`);
         }
@@ -459,7 +457,6 @@ function calculateLocalExtremaNumerically(func, expr) {
     return { text: 'Отсутствуют', desc: 'Не найдено на analysed промежутке' };
 }
 
-// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
 function getDomain(expr, type) {
     if (type === 'log') return '(0; +∞)';
     if (type === 'inverse' || expr.includes('/x')) return '(-∞; 0) ∪ (0; +∞)';
@@ -588,7 +585,7 @@ function updatePropertiesDisplay(props) {
 }
 
 function showLoading() {
-    document.getElementById('propertiesOutput').innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Анализ свойств...</p></div>';
+    document.getElementById('propertiesOutput').innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Анализ 13 свойств...</p></div>';
 }
 
 function showError(msg) {
