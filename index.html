@@ -20,7 +20,6 @@
             <div class="input-card">
                 <h3>🔍 Ввод функции</h3>
                 <div class="input-area">
-                    <!-- Убрано value, теперь поле пустое -->
                     <input type="text" id="functionInput" 
                            placeholder="Например: x^2 - 4 или exp(x)*sin(x)">
                     <button id="calculateBtn" class="primary-btn">Анализировать</button>
@@ -54,16 +53,17 @@
         <div class="main-content">
             <div class="properties-card">
                 <div class="card-header">
-                    <!-- Иконка изменена на 📋 -->
                     <h3>📋 Свойства функции</h3>
                     <div class="function-display" id="currentFunction">f(x) = ...</div>
                 </div>
+                
+                <!-- ИЗМЕНЕНИЕ ЗДЕСЬ: Убрана иконка и класс empty-state, оставлен только текст -->
                 <div id="propertiesOutput">
-                    <div class="empty-state">
-                        <div class="empty-icon">👈</div>
-                        <p>Введите функцию выше и нажмите «Анализировать»</p>
-                    </div>
+                    <p style="text-align: center; color: #95a5a6; padding: 40px 20px; font-size: 1.1em;">
+                        Введите функцию в поле выше и нажмите «Анализировать»,<br>чтобы увидеть её свойства и график.
+                    </p>
                 </div>
+                
             </div>
 
             <div class="graph-card">
