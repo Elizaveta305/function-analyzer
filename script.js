@@ -1,6 +1,6 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 6.3 - Fixed toFixed Error)
-// Исправлена ошибка formatNumber для строковых значений
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 6.4 - Final toFixed Fix)
+// Полная защита от ошибки toFixed
 // ============================================
 
 let currentFunction = null;
@@ -60,7 +60,7 @@ function parseFunction(expr) {
     };
 }
 
-// === УЛУЧШЕННОЕ ОПРЕДЕЛЕНИЕ ТИПА ФУНКЦИИ ===
+// === ОПРЕДЕЛЕНИЕ ТИПА ФУНКЦИИ ===
 function getFunctionType(expr) {
     let clean = expr.toLowerCase()
         .replace(/\s/g, '')
@@ -243,7 +243,6 @@ function analyzeFunction() {
             
             console.log('Выражение:', expr);
             console.log('Распознанный тип:', type);
-            console.log('Есть в базе знаний:', !!ANALYTICAL_DATA[type]);
             
             let isValid = false;
             let testPoints = [];
@@ -287,18 +286,13 @@ function analyzeFunctionProperties(expr, func, type) {
     const props = [];
     const data = ANALYTICAL_DATA[type];
     
-    // 1. Область определения
     props.push({ title: '1. Область определения', value: data ? data.domain : getDomain(expr, type), icon: '🌐', desc: 'D(f)' });
-    
-    // 2. Область значений
     props.push({ title: '2. Область значений', value: data ? data.range : calculateRangeNumerically(func), icon: '📏', desc: 'E(f)' });
     
-    // 3. Нули функции
     const zeros = data ? data.zeros : findZeros(func, expr, type);
     const zerosText = zeros.length > 0 ? zeros.map(z => formatNumber(z)).join(', ') : 'Нет действительных корней';
     props.push({ title: '3. Нули функции', value: zerosText, icon: '⚫', desc: 'f(x) = 0' });
 
-    // 4. Пересечение с OY
     const y0 = func.evaluate(0);
     const hasZeroAtOrigin = zeros.some(z => Math.abs(parseFloat(z)) < 0.01);
     if (y0 !== null && isFinite(y0)) {
@@ -307,32 +301,19 @@ function analyzeFunctionProperties(expr, func, type) {
         }
     }
 
-    // 5. Четность
     const parity = data ? data.parity : checkParity(func, type);
     props.push({ title: '5. Четность', value: parity.result, icon: '🔄', desc: parity.desc });
-    
-    // 6. Монотонность
     props.push({ title: '6. Монотонность', value: data ? data.monotonicity : calculateMonotonicityNumerically(func), icon: '📈', desc: 'Характер изменения' });
-    
-    // 7. Знакопостоянство
     props.push({ title: '7. Знакопостоянство', value: data ? data.sign : calculateSignIntervalsNumerically(func, expr), icon: '➕➖', desc: 'Интервалы знака' });
-    
-    // 8. Ограниченность
     props.push({ title: '8. Ограниченность', value: data ? data.bounded : calculateBoundednessNumerically(func), icon: '🔒', desc: 'Наличие границ' });
-    
-    // 9. Наим. и наиб. значение
     props.push({ title: '9. Наим. и наиб. значение', value: data ? data.extremes : calculateExtremesNumerically(func), icon: '🏆', desc: 'Экстремумы на R' });
-    
-    // 10. Непрерывность
     props.push({ title: '10. Непрерывность', value: data ? data.continuity : getContinuityValue(expr, type), icon: '〰️', desc: 'Точки разрыва' });
     
-    // 11. Выпуклость
     const convexInfo = data ? data.convexity : calculateConvexityNumerically(func, expr);
     if (convexInfo) {
         props.push({ title: '11. Выпуклость', value: convexInfo.text, icon: '📉', desc: convexInfo.desc });
     }
 
-    // 12. Периодичность
     if (['sin', 'cos', 'tan', 'cot'].includes(type)) {
         const period = (type === 'tan' || type === 'cot') ? 'π' : '2π';
         props.push({ title: '12. Периодичность', value: `Периодическая (T=${period})`, icon: '⏱️', desc: 'Повторяется через промежуток' });
@@ -340,7 +321,6 @@ function analyzeFunctionProperties(expr, func, type) {
         props.push({ title: '12. Периодичность', value: 'Не периодическая', icon: '⏱️', desc: 'Не имеет периода' });
     }
 
-    // 13. Локальные экстремумы
     const extremaInfo = data ? data.localExtrema : calculateLocalExtremaNumerically(func, expr);
     props.push({ title: '13. Локальные экстремумы', value: extremaInfo.text, icon: '🏔️', desc: extremaInfo.desc });
 
@@ -349,14 +329,21 @@ function analyzeFunctionProperties(expr, func, type) {
 
 // === ИСПРАВЛЕННАЯ ФУНКЦИЯ formatNumber ===
 function formatNumber(num) {
-    // Сначала преобразуем в число (если это строка)
-    const number = Number(num);
-    if (isNaN(number)) return num;
+    if (num === null || num === undefined) return '0';
+    const number = typeof num === 'string' ? parseFloat(num) : Number(num);
+    if (isNaN(number)) return String(num);
     if (Math.abs(number) < 0.001) return '0';
-    return Number(number.toFixed(2)).toString();
+    return number.toFixed(2);
 }
 
-// === ЧИСЛЕННЫЕ МЕТОДЫ (Fallback) ===
+// === БЕЗОПАСНАЯ ФУНКЦИЯ для toFixed ===
+function safeToFixed(value, decimals = 1) {
+    const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+    if (isNaN(num)) return String(value);
+    return num.toFixed(decimals);
+}
+
+// === ЧИСЛЕННЫЕ МЕТОДЫ ===
 function calculateRangeNumerically(func) {
     let min = Infinity, max = -Infinity;
     for (let x = -20; x <= 20; x += 0.1) {
@@ -380,13 +367,15 @@ function calculateSignIntervalsNumerically(func, expr) {
         return 'Не определено';
     }
     let pos = [], neg = [];
-    let points = [-10, ...zeros.map(Number), 10];
+    // ИСПРАВЛЕНО: явно конвертируем все значения в числа
+    let points = [-10, ...zeros.map(z => Number(z)), 10];
     for (let i = 0; i < points.length - 1; i++) {
         let mid = (points[i] + points[i+1]) / 2;
         const val = func.evaluate(mid);
         if (val !== null) {
-            if (val > 0) pos.push(`(${points[i].toFixed(1)}; ${points[i+1].toFixed(1)})`);
-            else neg.push(`(${points[i].toFixed(1)}; ${points[i+1].toFixed(1)})`);
+            // ИСПРАВЛЕНО: используем safeToFixed
+            if (val > 0) pos.push(`(${safeToFixed(points[i])}; ${safeToFixed(points[i+1])})`);
+            else neg.push(`(${safeToFixed(points[i])}; ${safeToFixed(points[i+1])})`);
         }
     }
     let res = '';
