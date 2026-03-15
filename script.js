@@ -1,6 +1,6 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 4.1 - Clean Start)
-// Запуск только по действию пользователя
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 5.0 - FULL ANALYSIS)
+// Реализован полный список свойств функции (13 пунктов)
 // ============================================
 
 let currentFunction = null;
@@ -18,7 +18,6 @@ function parseFunction(expr) {
                     .replace(/\s+/g, '') 
                     .replace(/\^/g, '**'); 
 
-                // ЭТАП 1: Функции → временные метки
                 processedExpr = processedExpr
                     .replace(/sin\(/g, '__FN_SIN__(')
                     .replace(/cos\(/g, '__FN_COS__(')
@@ -30,12 +29,10 @@ function parseFunction(expr) {
                     .replace(/sqrt\(/g, '__FN_SQRT__(')
                     .replace(/abs\(/g, '__FN_ABS__(');
 
-                // ЭТАП 2: Константы и переменная
                 processedExpr = processedExpr.replace(/\bpi\b/gi, 'Math.PI');
                 processedExpr = processedExpr.replace(/\be\b/g, 'Math.E'); 
                 processedExpr = processedExpr.replace(/\bx\b/g, `(${xVal})`); 
                 
-                // ЭТАП 3: Восстановление функций
                 processedExpr = processedExpr
                     .replace(/__FN_SIN__\(/g, 'Math.sin(')
                     .replace(/__FN_COS__\(/g, 'Math.cos(')
@@ -52,7 +49,6 @@ function parseFunction(expr) {
                 if (!isFinite(result) || isNaN(result)) return null;
                 return result;
             } catch(e) {
-                console.error("Ошибка вычисления:", e.message, "Выражение:", expr);
                 return null;
             }
         },
@@ -83,30 +79,19 @@ function analyzeFunction() {
             const testPoints = expr.toLowerCase().includes('log') ? [1, 2, Math.E, 10] : [-2, -1, 0, 1, 2];
             
             for (let x of testPoints) {
-                const val = func.evaluate(x);
-                if (val !== null && isFinite(val)) {
-                    isValid = true;
-                    break;
-                }
+                if (func.evaluate(x) !== null) { isValid = true; break; }
             }
-            
             if (!isValid) {
-                const extraPoints = [0.1, 0.5, 3, 5, -0.5];
-                for (let x of extraPoints) {
-                    if (func.evaluate(x) !== null) {
-                        isValid = true;
-                        break;
-                    }
+                for (let x of [0.1, 0.5, 3, 5, -0.5]) {
+                    if (func.evaluate(x) !== null) { isValid = true; break; }
                 }
             }
 
-            if (!isValid) {
-                throw new Error('Функция не определена в стандартной области.');
-            }
+            if (!isValid) throw new Error('Функция не определена в стандартной области.');
             
             currentFunction = func;
             document.getElementById('currentFunction').textContent = `f(x) = ${expr}`;
-            document.getElementById('graphStatus').textContent = 'Анализ...';
+            document.getElementById('graphStatus').textContent = 'Глубокий анализ...';
             
             const properties = analyzeFunctionProperties(expr, func);
             updatePropertiesDisplay(properties);
@@ -123,38 +108,241 @@ function analyzeFunction() {
     }, 50);
 }
 
-// --- АНАЛИЗ СВОЙСТВ ---
+// --- ПОЛНЫЙ АНАЛИЗ СВОЙСТВ (13 ПУНКТОВ) ---
 function analyzeFunctionProperties(expr, func) {
     const props = [];
-    
-    // Иконка 📊 оставлена только здесь
-    props.push({ title: 'Тип функции', value: determineFunctionType(expr), icon: '📊', desc: 'Классификация' });
-    props.push({ title: 'Область определения', value: getDomain(expr), icon: '🌐', desc: 'D(f)' });
-    
+    const lower = expr.toLowerCase();
+
+    // 1. Область определения
+    props.push({ title: '1. Область определения', value: getDomain(expr), icon: '🌐', desc: 'D(f)' });
+
+    // 2. Область значений (Численная оценка)
+    const rangeInfo = findRange(func, expr);
+    props.push({ title: '2. Область значений', value: rangeInfo.text, icon: '📏', desc: 'E(f)' });
+
+    // 3. Нули функции
     const zeros = findZeros(func, expr);
-    props.push({ title: 'Нули функции', value: zeros.length > 0 ? zeros.join(', ') : 'Нет в диапазоне', icon: '⚫', desc: 'f(x)=0' });
-    
+    const zerosText = zeros.length > 0 ? zeros.map(z => formatNumber(z)).join(', ') : 'Нет действительных корней';
+    props.push({ title: '3. Нули функции', value: zerosText, icon: '⚫', desc: 'f(x) = 0' });
+
+    // 4. Пересечение с OY
     const y0 = func.evaluate(0);
+    const hasZeroAtOrigin = zeros.some(z => Math.abs(parseFloat(z)) < 0.01);
     if (y0 !== null && isFinite(y0)) {
-        props.push({ title: 'Пересечение с Y', value: `(0; ${y0.toFixed(2)})`, icon: '🔵', desc: 'При x=0' });
+        if (Math.abs(y0) > 0.01 || zeros.length === 0) {
+            props.push({ title: '4. Пересечение с OY', value: `(0; ${formatNumber(y0)})`, icon: '🔵', desc: 'При x = 0' });
+        }
     }
-    
-    const extrema = findExtrema(func, expr);
+
+    // 5. Четность
+    props.push({ title: '5. Четность', value: checkParity(func).result, icon: '🔄', desc: checkParity(func).desc });
+
+    // 6. Монотонность (Возрастание/Убывание)
+    const mono = findMonotonicity(func, expr);
+    props.push({ title: '6. Монотонность', value: mono.text, icon: '📈', desc: mono.desc });
+
+    // 7. Промежутки знакопостоянства
+    const signs = findSignIntervals(func, expr);
+    props.push({ title: '7. Знакопостоянство', value: signs.text, icon: '➕➖', desc: 'Где f(x)>0 и f(x)<0' });
+
+    // 8. Ограниченность
+    const bounded = checkBoundedness(func, expr);
+    props.push({ title: '8. Ограниченность', value: bounded.text, icon: '🔒', desc: bounded.desc });
+
+    // 9. Наибольшее и наименьшее значение (на промежутке [-10; 10])
+    const extremes = findGlobalExtremes(func, expr);
+    props.push({ title: '9. Наим. и наиб. значение', value: extremes.text, icon: '🏆', desc: 'На промежутке [-10; 10]' });
+
+    // 10. Непрерывность
+    const continuity = checkContinuity(func, expr);
+    props.push({ title: '10. Непрерывность', value: continuity.text, icon: '〰️', desc: continuity.desc });
+
+    // 11. Выпуклость (Численная оценка второй производной)
+    const convex = checkConvexity(func, expr);
+    props.push({ title: '11. Выпуклость', value: convex.text, icon: '📉', desc: convex.desc });
+
+    // 12. Периодичность
+    if (lower.includes('sin') || lower.includes('cos') || lower.includes('tan')) {
+        const period = lower.includes('tan') ? 'π' : '2π';
+        props.push({ title: '12. Периодичность', value: `Периодическая (T=${period})`, icon: '⏱️', desc: 'Повторяется через промежуток' });
+    } else {
+        props.push({ title: '12. Периодичность', value: 'Не периодическая', icon: '⏱️', desc: 'Не имеет периода' });
+    }
+
+    // 13. Экстремумы (Локальные)
+    const extrema = findLocalExtrema(func, expr);
     if (extrema.length > 0) {
-        const extStr = extrema.map(e => `${e.type === 'max' ? 'Макс' : 'Мин'} (x=${e.x.toFixed(2)})`).join('; ');
-        props.push({ title: 'Экстремумы', value: extStr, icon: '🏔️', desc: 'Локальные точки' });
+        const extText = extrema.map(e => `${e.type === 'max' ? 'Макс' : 'Мин'} при x=${formatNumber(e.x)}`).join('; ');
+        props.push({ title: '13. Локальные экстремумы', value: extText, icon: '🏔️', desc: 'Точки перегиба направления' });
+    } else {
+        props.push({ title: '13. Локальные экстремумы', value: 'Отсутствуют', icon: '🏔️', desc: 'Нет точек максимума или минимума' });
     }
-    
-    props.push({ title: 'Чётность', value: checkParity(func).result, icon: '🔄', desc: checkParity(func).desc });
 
     return props;
 }
 
-function findExtrema(func, expr) {
-    const extrema = [];
+// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ АНАЛИЗА ---
+
+function findRange(func, expr) {
+    // Численный поиск мин и макс на большом промежутке
+    let min = Infinity, max = -Infinity;
+    let hasValue = false;
     const step = 0.1;
+    const rangeLimit = 20; // Смотрим на [-20; 20]
+    
+    // Особые случаи
+    if (expr.includes('x**2') || expr.includes('^2')) return { text: '[0; +∞)', desc: 'Ветви вверх' };
+    if (expr.includes('sin') || expr.includes('cos')) return { text: '[-1; 1]', desc: 'Стандартный диапазон' };
+    if (expr === '1/x') return { text: '(-∞; 0) ∪ (0; +∞)', desc: 'Все кроме 0' };
+    if (expr.toLowerCase().includes('exp')) return { text: '(0; +∞)', desc: 'Только положительные' };
+    if (expr.toLowerCase().includes('log')) return { text: '(-∞; +∞)', desc: 'Все действительные' };
+
+    for (let x = -rangeLimit; x <= rangeLimit; x += step) {
+        const y = func.evaluate(x);
+        if (y !== null && isFinite(y)) {
+            hasValue = true;
+            if (y < min) min = y;
+            if (y > max) max = y;
+        }
+    }
+    
+    if (!hasValue) return { text: 'Не определено', desc: '' };
+    
+    // Проверка на уход в бесконечность (сравнение краевых точек)
+    const yStart = func.evaluate(-rangeLimit);
+    const yEnd = func.evaluate(rangeLimit);
+    
+    let resText = '';
+    if (yEnd !== null && yEnd > 1000) resText = `[${formatNumber(min)}; +∞)`;
+    else if (yStart !== null && yStart > 1000) resText = `[${formatNumber(min)}; +∞)`;
+    else if (yEnd !== null && yEnd < -1000) resText = `(-∞; ${formatNumber(max)}]`;
+    else if (yStart !== null && yStart < -1000) resText = `(-∞; ${formatNumber(max)}]`;
+    else resText = `[${formatNumber(min)}; ${formatNumber(max)}]`;
+    
+    return { text: resText, desc: 'Оценочно на промежутке' };
+}
+
+function findMonotonicity(func, expr) {
+    // Упрощенный анализ: проверяем знак производной в нескольких точках
+    // Если везде положителен -> возрастает, отрицателен -> убывает, меняется -> не монотонна
+    let inc = 0, dec = 0;
+    const points = [-5, -1, 1, 5];
+    
+    for (let x of points) {
+        if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
+        const y1 = func.evaluate(x);
+        const y2 = func.evaluate(x + 0.1);
+        if (y1 !== null && y2 !== null) {
+            if (y2 > y1) inc++;
+            else if (y2 < y1) dec++;
+        }
+    }
+    
+    if (inc > 0 && dec === 0) return { text: 'Возрастает', desc: 'На всей области определения' };
+    if (dec > 0 && inc === 0) return { text: 'Убывает', desc: 'На всей области определения' };
+    return { text: 'Не монотонна', desc: 'Есть промежутки возрастания и убывания' };
+}
+
+function findSignIntervals(func, expr) {
+    // Ищем интервалы, разбитые нулями
+    const zeros = findZeros(func, expr);
+    // Добавляем границы области определения если нужно (для простоты берем -10 и 10)
+    let points = [-10, ...zeros.map(Number), 10];
+    points.sort((a,b) => a-b);
+    
+    let pos = [], neg = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        let mid = (points[i] + points[i+1]) / 2;
+        // Пропускаем разрывы
+        if (expr.includes('/x') && Math.abs(mid) < 0.1) continue;
+        
+        const val = func.evaluate(mid);
+        if (val !== null) {
+            if (val > 0) pos.push(`(${points[i].toFixed(1)}; ${points[i+1].toFixed(1)})`);
+            else neg.push(`(${points[i].toFixed(1)}; ${points[i+1].toFixed(1)})`);
+        }
+    }
+    
+    let res = '';
+    if (pos.length > 0) res += `f(x)>0 на: ${pos.join(', ')}. `;
+    if (neg.length > 0) res += `f(x)<0 на: ${neg.join(', ')}`;
+    if (res === '') res = 'Не определено в диапазоне';
+    
+    return { text: res.length > 60 ? res.substring(0, 55) + '...' : res, desc: 'Интервалы знака' };
+}
+
+function checkBoundedness(func, expr) {
+    if (expr.includes('sin') || expr.includes('cos')) return { text: 'Ограничена', desc: 'Сверху и снизу' };
+    if (expr.includes('x**2') || expr.includes('^2')) return { text: 'Ограничена снизу', desc: 'Есть минимум' };
+    if (expr.toLowerCase().includes('exp')) return { text: 'Ограничена снизу', desc: 'y > 0' };
+    if (expr === '1/x') return { text: 'Не ограничена', desc: 'Уходит в ±∞' };
+    
+    // Проверка по краям
+    const y1 = func.evaluate(-100);
+    const y2 = func.evaluate(100);
+    if ((y1 !== null && Math.abs(y1) > 1000) || (y2 !== null && Math.abs(y2) > 1000)) {
+        return { text: 'Не ограничена', desc: 'Уходит в бесконечность' };
+    }
+    return { text: 'Ограничена (локально)', desc: 'В рассматриваемом диапазоне' };
+}
+
+function findGlobalExtremes(func, expr) {
+    let min = Infinity, max = -Infinity;
+    let found = false;
+    for (let x = -10; x <= 10; x += 0.1) {
+        const y = func.evaluate(x);
+        if (y !== null && isFinite(y)) {
+            found = true;
+            if (y < min) min = y;
+            if (y > max) max = y;
+        }
+    }
+    if (!found) return { text: 'Нет данных', desc: '' };
+    
+    let tMin = (min === -Infinity || min < -1000) ? '-∞' : formatNumber(min);
+    let tMax = (max === Infinity || max > 1000) ? '+∞' : formatNumber(max);
+    
+    return { text: `min: ${tMin}, max: ${tMax}`, desc: 'На отрезке [-10; 10]' };
+}
+
+function checkContinuity(func, expr) {
+    if (expr.includes('/x')) return { text: 'Разрывна', desc: 'Разрыв при x=0' };
+    if (expr.toLowerCase().includes('log')) return { text: 'Непрерывна', desc: 'На области определения (0; +∞)' };
+    if (expr.toLowerCase().includes('tan')) return { text: 'Разрывна', desc: 'Разрывы в точках π/2 + πn' };
+    return { text: 'Непрерывна', desc: 'На всей области определения' };
+}
+
+function checkConvexity(func, expr) {
+    // Численная проверка второй производной (знак разности первых производных)
+    // f''(x) ≈ (f(x+h) - 2f(x) + f(x-h)) / h^2
+    let up = 0, down = 0;
+    const h = 0.5;
+    const points = [-5, -2, 2, 5];
+    
+    for (let x of points) {
+        if (expr.includes('/x') && Math.abs(x) < 1) continue;
+        const y_m = func.evaluate(x - h);
+        const y_0 = func.evaluate(x);
+        const y_p = func.evaluate(x + h);
+        
+        if (y_m !== null && y_0 !== null && y_p !== null) {
+            const d2 = y_p - 2*y_0 + y_m;
+            if (d2 > 0.01) up++;
+            if (d2 < -0.01) down++;
+        }
+    }
+    
+    if (up > 0 && down === 0) return { text: 'Выпукла вниз', desc: 'Как парабола x²' };
+    if (down > 0 && up === 0) return { text: 'Выпукла вверх', desc: 'Как перевернутая парабола' };
+    if (up > 0 && down > 0) return { text: 'Имеет перегибы', desc: 'Меняет направление выпуклости' };
+    return { text: 'Сложная форма', desc: 'Трудно определить численно' };
+}
+
+function findLocalExtrema(func, expr) {
+    const extrema = [];
+    const step = 0.2;
     const range = 10;
-    if (expr === 'x' || expr === '1/x' || expr.toLowerCase().includes('log')) return [];
+    if (expr === 'x' || expr === '1/x' || expr.toLowerCase().includes('log') || lowerIncludesAny(expr, ['sin','cos','tan'])) return [];
 
     for (let x = -range; x < range; x += step) {
         const y1 = func.evaluate(x);
@@ -166,10 +354,51 @@ function findExtrema(func, expr) {
         const d1 = y2 - y1;
         const d2 = y3 - y2;
         
-        if (d1 > 0.001 && d2 < -0.001) extrema.push({ x: x + step, type: 'max' });
-        else if (d1 < -0.001 && d2 > 0.001) extrema.push({ x: x + step, type: 'min' });
+        if (d1 > 0.01 && d2 < -0.01) extrema.push({ x: x + step, type: 'max' });
+        else if (d1 < -0.01 && d2 > 0.01) extrema.push({ x: x + step, type: 'min' });
     }
     return extrema;
+}
+
+function lowerIncludesAny(str, arr) {
+    const low = str.toLowerCase();
+    return arr.some(s => low.includes(s));
+}
+
+// --- СТАРЫЕ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (Оптимизированные) ---
+function findZeros(func, expr) {
+    const rawZeros = [];
+    const step = 0.1;
+    if (expr.toLowerCase().includes('exp')) return [];
+    if (expr === '1/x') return [];
+    
+    for (let x = -10; x <= 10; x += step) {
+        if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
+        const y1 = func.evaluate(x);
+        const y2 = func.evaluate(x + step);
+        if (y1 === null || y2 === null) continue;
+        
+        if (Math.abs(y1) < 0.05) rawZeros.push(x);
+        else if (y1 * y2 < 0) rawZeros.push(x + step/2);
+    }
+    
+    const zeros = [];
+    if (rawZeros.length > 0) {
+        zeros.push(rawZeros[0]);
+        for (let i = 1; i < rawZeros.length; i++) {
+            if (Math.abs(rawZeros[i] - rawZeros[i-1]) > 0.5) zeros.push(rawZeros[i]);
+        }
+    }
+    return zeros;
+}
+
+function checkParity(func) {
+    const a = func.evaluate(1);
+    const b = func.evaluate(-1);
+    if (a === null || b === null) return { result: 'Не определено', desc: '-' };
+    if (Math.abs(a - b) < 0.001) return { result: 'Чётная', desc: 'Симметрия относительно OY' };
+    if (Math.abs(a + b) < 0.001) return { result: 'Нечётная', desc: 'Симметрия относительно начала координат' };
+    return { result: 'Общего вида', desc: 'Нет симметрии' };
 }
 
 function determineFunctionType(expr) {
@@ -187,55 +416,28 @@ function getDomain(expr) {
     if (lower.includes('log')) return '(0; +∞)';
     if (lower.includes('sqrt')) return '[0; +∞)';
     if (lower.includes('/x')) return '(-∞; 0) ∪ (0; +∞)';
+    if (lower.includes('tan')) return 'Все x, кроме π/2 + πn';
     return '(-∞; +∞)';
 }
 
-function findZeros(func, expr) {
-    const zeros = [];
-    const step = 0.1;
-    if (expr.toLowerCase().includes('exp')) return [];
-    if (expr === '1/x') return [];
-    
-    for (let x = -10; x <= 10; x += step) {
-        if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
-        const y1 = func.evaluate(x);
-        const y2 = func.evaluate(x + step);
-        if (y1 === null || y2 === null) continue;
-        if (Math.abs(y1) < 0.05) zeros.push(x.toFixed(2));
-        else if (y1 * y2 < 0) zeros.push((x + step/2).toFixed(2));
-    }
-    return [...new Set(zeros)].slice(0, 5);
+function formatNumber(num) {
+    if (Math.abs(num) < 0.001) return '0';
+    return Number(num.toFixed(2)).toString();
 }
 
-function checkParity(func) {
-    const a = func.evaluate(1);
-    const b = func.evaluate(-1);
-    if (a === null || b === null) return { result: 'Не определено', desc: '-' };
-    if (Math.abs(a - b) < 0.001) return { result: 'Чётная', desc: 'Симметрия Y' };
-    if (Math.abs(a + b) < 0.001) return { result: 'Нечётная', desc: 'Симметрия 0' };
-    return { result: 'Общего вида', desc: 'Нет симметрии' };
-}
-
-// --- ГРАФИК ---
+// --- ГРАФИК и UI (Без изменений) ---
 function plotFunction(func, expr) {
     const range = parseInt(document.getElementById('xRange').value);
     const step = range / 300;
     const xVals = [], yVals = [];
     let startX = -range, endX = range;
-    
     if (expr.toLowerCase().includes('log')) startX = 0.01;
 
     for (let x = startX; x <= endX; x += step) {
-        if (expr.includes('/x') && Math.abs(x) < 0.05) {
-            xVals.push(x); yVals.push(null);
-            continue;
-        }
+        if (expr.includes('/x') && Math.abs(x) < 0.05) { xVals.push(x); yVals.push(null); continue; }
         const y = func.evaluate(x);
-        if (y !== null && Math.abs(y) < 1000) {
-            xVals.push(x); yVals.push(y);
-        } else {
-            xVals.push(x); yVals.push(null);
-        }
+        if (y !== null && Math.abs(y) < 1000) { xVals.push(x); yVals.push(y); }
+        else { xVals.push(x); yVals.push(null); }
     }
     
     const trace = { x: xVals, y: yVals, mode: 'lines', line: { color: '#2c3e50', width: 3 } };
@@ -245,11 +447,9 @@ function plotFunction(func, expr) {
         yaxis: { title: 'Y', zeroline: true, gridcolor: '#eee' },
         paper_bgcolor: '#fff', plot_bgcolor: '#fff'
     };
-    
     Plotly.react('plot', [trace], layout, {displayModeBar: false});
 }
 
-// --- UI ---
 function updatePropertiesDisplay(props) {
     document.getElementById('propertiesOutput').innerHTML = props.map(p => `
         <div class="property-item">
@@ -264,39 +464,30 @@ function updatePropertiesDisplay(props) {
 }
 
 function showLoading() {
-    document.getElementById('propertiesOutput').innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Вычисление...</p></div>';
+    document.getElementById('propertiesOutput').innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Выполняется полный анализ 13 свойств...</p></div>';
 }
 
 function showError(msg) {
-    document.getElementById('propertiesOutput').innerHTML = `
-        <div class="error-state"><div class="error-icon">⚠️</div><div class="error-msg">${msg}</div></div>`;
+    document.getElementById('propertiesOutput').innerHTML = `<div class="error-state"><div class="error-icon">⚠️</div><div class="error-msg">${msg}</div></div>`;
 }
 
-// --- INIT ---
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('calculateBtn').addEventListener('click', analyzeFunction);
     document.getElementById('functionInput').addEventListener('keypress', e => { if (e.key === 'Enter') analyzeFunction(); });
-    
     document.querySelectorAll('.example-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.getElementById('functionInput').value = this.dataset.func;
             analyzeFunction();
         });
     });
-    
     const slider = document.getElementById('xRange');
     const rangeVal = document.getElementById('rangeValue');
     slider.addEventListener('input', () => rangeVal.textContent = slider.value);
     slider.addEventListener('change', () => { if(currentFunction) plotFunction(currentFunction, currentExpression); });
-    
     document.getElementById('zoomInBtn').addEventListener('click', () => Plotly.relayout('plot', {'xaxis.range[0]': '*=0.8', 'xaxis.range[1]': '*=0.8'}));
     document.getElementById('zoomOutBtn').addEventListener('click', () => Plotly.relayout('plot', {'xaxis.range[0]': '*=1.2', 'xaxis.range[1]': '*=1.2'}));
     document.getElementById('resetViewBtn').addEventListener('click', () => { if(currentFunction) plotFunction(currentFunction, currentExpression); });
-
-    // Инициализация пустого графика
     initializePlot();
-    
-    // АВТОЗАПУСК ОТКЛЮЧЕН. Сайт ждет ввода пользователя.
 });
 
 function initializePlot() {
