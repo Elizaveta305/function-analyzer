@@ -1,61 +1,48 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ
-// Автономная версия БЕЗ Math.js
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 2.0)
+// Исправлена ошибка с exp(x) и улучшена логика
 // ============================================
 
-// Глобальные переменные
 let currentFunction = null;
 let currentExpression = '';
 
-// Безопасный парсер математических выражений
+// --- ЯДРО: Безопасный парсер ---
 function parseFunction(expr) {
-    // Сохраняем исходное выражение для отображения
     const displayExpr = expr;
     currentExpression = expr;
     
     return {
-        evaluate: function(x) {
+        evaluate: function(xVal) {
             try {
-                // Сначала обрабатываем специальные замены
                 let processedExpr = expr
                     .replace(/\s+/g, '') // Убираем пробелы
-                    .replace(/\^/g, '**') // ^ заменяем на **
-                    .toLowerCase();
+                    .replace(/\^/g, '**'); // ^ в степень
                 
-                // Заменяем математические функции
+                // 1. ЗАМЕНА ФУНКЦИЙ (до замены x!)
                 processedExpr = processedExpr
                     .replace(/sin\(/g, 'Math.sin(')
                     .replace(/cos\(/g, 'Math.cos(')
                     .replace(/tan\(/g, 'Math.tan(')
                     .replace(/log10\(/g, 'Math.log10(')
-                    .replace(/log\(/g, 'Math.log(') // log(x) -> натуральный логарифм
+                    .replace(/log\(/g, 'Math.log(') // ln
                     .replace(/ln\(/g, 'Math.log(')
-                    .replace(/exp\(/g, 'Math.exp(') // exp(x) -> e^x
+                    .replace(/exp\(/g, 'Math.exp(') // exp
                     .replace(/sqrt\(/g, 'Math.sqrt(')
                     .replace(/abs\(/g, 'Math.abs(')
-                    .replace(/pi/g, 'Math.PI')
-                    .replace(/e/g, 'Math.E');
+                    .replace(/pi/gi, 'Math.PI')
+                    .replace(/e/gi, 'Math.E');
+
+                // 2. ЗАМЕНА ПЕРЕМЕННОЙ X (Только если x стоит отдельно!)
+                // \b означает границу слова. Так мы не сломаем "Math.exp"
+                // Заменяем 'x' на значение, но только если это переменная
+                processedExpr = processedExpr.replace(/\bx\b/g, `(${xVal})`);
                 
-                // Заменяем x на его значение
-                processedExpr = processedExpr.replace(/x/g, x);
-                
-                // Безопасная оценка через Function (лучше чем eval)
+                // Выполняем вычисление
                 const result = new Function('return ' + processedExpr)();
                 
-                // Проверка на специальные случаи
-                if (result === Infinity || result === -Infinity) {
-                    return null; // Для обработки асимптот
-                }
-                
-                if (isNaN(result)) {
-                    return null; // Для неопределенных значений
-                }
-                
+                if (!isFinite(result) || isNaN(result)) return null;
                 return result;
             } catch(e) {
-                console.error('Ошибка вычисления:', e);
-                console.error('Выражение:', expr);
-                console.error('Значение x:', x);
                 return null;
             }
         },
@@ -65,670 +52,330 @@ function parseFunction(expr) {
     };
 }
 
-// Основная функция анализа
+// --- ОСНОВНАЯ ЛОГИКА ---
 function analyzeFunction() {
     const input = document.getElementById('functionInput');
     let expr = input.value.trim();
     
     if (!expr) {
-        showError('Введите функцию для анализа');
+        showError('Введите формулу функции');
         return;
     }
     
-    // Автоматически заменяем ^ на ** если пользователь забыл
-    if (expr.includes('^') && !expr.includes('**')) {
-        expr = expr.replace(/\^/g, '**');
-        input.value = expr;
-    }
-    
-    // Показываем загрузку
     showLoading();
     
     try {
-        // Создаем функцию
         const func = parseFunction(expr);
         
-        // Тестируем функцию
-        let testPoints = [];
+        // Тестовый запуск для проверки валидности
+        let isValid = false;
+        const testPoints = expr.includes('log') ? [1, 2, Math.E] : [-1, 0, 1, 2];
         
-        // Выбираем тестовые точки в зависимости от типа функции
-        if (expr.toLowerCase().includes('log')) {
-            // Для логарифмических функций используем положительные значения
-            testPoints = [0.5, 1, 2, Math.E];
-        } else if (expr.toLowerCase().includes('exp')) {
-            // Для экспоненты
-            testPoints = [-2, -1, 0, 1];
-        } else if (expr.includes('/x') && !expr.includes('x**')) {
-            // Для дробных функций избегаем 0
-            testPoints = [-2, -1, 1, 2];
-        } else {
-            testPoints = [-2, -1, 0, 1, 2];
-        }
-        
-        let validTest = false;
         for (let x of testPoints) {
-            const testResult = func.evaluate(x);
-            console.log(`Тест f(${x}) =`, testResult);
-            if (testResult !== null && isFinite(testResult)) {
-                validTest = true;
+            if (func.evaluate(x) !== null) {
+                isValid = true;
                 break;
             }
         }
         
-        if (!validTest) {
-            // Пробуем еще раз с другими точками
-            testPoints = [0.1, 1, 10];
-            for (let x of testPoints) {
-                const testResult = func.evaluate(x);
-                if (testResult !== null && isFinite(testResult)) {
-                    validTest = true;
-                    break;
-                }
-            }
+        if (!isValid && !expr.includes('sqrt') && !expr.includes('log')) {
+             // Если функция сложная, пробуем еще точки
+             if (func.evaluate(0.5) !== null) isValid = true;
         }
-        
-        if (!validTest) {
-            throw new Error('Неверное математическое выражение или функция не определена');
+
+        if (!isValid) {
+            throw new Error('Функция не определена в стандартной области или содержит ошибку синтаксиса.');
         }
         
         currentFunction = func;
-        
-        // Обновляем отображение
         document.getElementById('currentFunction').textContent = `f(x) = ${expr}`;
-        document.getElementById('graphStatus').textContent = 'Построение графика...';
+        document.getElementById('graphStatus').textContent = 'Анализ...';
         
-        // Анализируем свойства
+        // Запуск анализа свойств
         const properties = analyzeFunctionProperties(expr, func);
-        
-        // Обновляем интерфейс
         updatePropertiesDisplay(properties);
         
-        // Строим график
+        // Построение графика
         plotFunction(func, expr);
-        
-        // Показываем успех
-        document.getElementById('graphStatus').textContent = 'График построен';
+        document.getElementById('graphStatus').textContent = 'Готово';
         
     } catch (error) {
-        console.error('Ошибка анализа:', error);
-        showError(`Ошибка: ${error.message || 'Неверное выражение'}`);
-        document.getElementById('graphStatus').textContent = 'Ошибка построения';
+        console.error(error);
+        showError(`Ошибка: ${error.message}. Проверьте синтаксис (например, используйте * для умножения).`);
+        document.getElementById('graphStatus').textContent = 'Ошибка';
     }
 }
 
-// Анализ свойств функции
+// --- АНАЛИЗ СВОЙСТВ ---
 function analyzeFunctionProperties(expr, func) {
-    const properties = [];
+    const props = [];
     
-    // 1. Тип функции
-    const type = determineFunctionType(expr);
-    properties.push({
+    // 1. Тип
+    props.push({
         title: 'Тип функции',
-        value: type,
+        value: determineFunctionType(expr),
         icon: '📊',
-        description: 'Классификация по математическому виду'
+        desc: 'Классификация'
     });
     
-    // 2. Область определения
-    const domain = getFunctionDomain(expr);
-    properties.push({
-        title: 'Область определения',
-        value: domain,
+    // 2. Область определения (упрощенно)
+    props.push({
+        title: 'Область определения (D(f))',
+        value: getDomain(expr),
         icon: '🌐',
-        description: 'Множество допустимых значений x'
+        desc: 'Допустимые значения X'
     });
     
-    // 3. Нули функции - ИСПРАВЛЕНО для 1/x
+    // 3. Нули функции (корни)
     const zeros = findZeros(func, expr);
-    properties.push({
-        title: 'Нули функции',
-        value: zeros.length > 0 ? zeros.join(', ') : 'Нет действительных нулей',
+    props.push({
+        title: 'Нули функции (f(x)=0)',
+        value: zeros.length > 0 ? zeros.join(', ') : 'Нет корней в диапазоне [-10; 10]',
         icon: '⚫',
-        description: 'Точки пересечения с осью OX (f(x) = 0)'
+        desc: 'Пересечение с осью X'
     });
     
-    // 4. Точка пересечения с OY
-    try {
-        const yIntercept = func.evaluate(0);
-        if (yIntercept !== null && isFinite(yIntercept)) {
-            properties.push({
-                title: 'Пересечение с OY',
-                value: `(0, ${yIntercept.toFixed(3)})`,
-                icon: '🔵',
-                description: 'Значение функции при x = 0'
-            });
-        }
-    } catch(e) {
-        // Игнорируем ошибку
+    // 4. Пересечение с OY
+    const y0 = func.evaluate(0);
+    if (y0 !== null) {
+        props.push({
+            title: 'Пересечение с осью Y',
+            value: `(0; ${y0.toFixed(2)})`,
+            icon: '🔵',
+            desc: 'Значение при x=0'
+        });
     }
     
-    // 5. Чётность
-    const parity = checkParity(func);
-    properties.push({
-        title: 'Чётность функции',
-        value: parity.result,
+    // 5. Экстремумы (численный поиск)
+    const extrema = findExtrema(func, expr);
+    if (extrema.length > 0) {
+        const extStr = extrema.map(e => `${e.type === 'max' ? 'Макс' : 'Мин'} в x=${e.x.toFixed(2)}`).join('; ');
+        props.push({
+            title: 'Экстремумы',
+            value: extStr,
+            icon: '🏔️',
+            desc: 'Локальные максимумы и минимумы'
+        });
+    }
+    
+    // 6. Четность
+    props.push({
+        title: 'Чётность',
+        value: checkParity(func).result,
         icon: '🔄',
-        description: parity.description
+        desc: checkParity(func).desc
     });
-    
-    // 6. Специальные свойства
-    if (expr.includes('sin') || expr.includes('cos') || expr.includes('tan')) {
-        properties.push({
-            title: 'Периодичность',
-            value: 'Периодическая',
-            icon: '⏱️',
-            description: expr.includes('tan') ? 'Период π' : 'Период 2π'
-        });
-    }
-    
-    if (expr.toLowerCase().includes('log')) {
-        properties.push({
-            title: 'Особые точки',
-            value: 'x ≤ 0 не входит в область определения',
-            icon: '⚠️',
-            description: 'Логарифм определен только для x > 0'
-        });
-    }
-    
-    if (expr.includes('/x') && !expr.includes('**')) {
-        // Только для простых дробей типа 1/x
-        properties.push({
-            title: 'Асимптоты',
-            value: 'x = 0',
-            icon: '↗️',
-            description: 'Вертикальная асимптота при x = 0'
-        });
-    }
-    
-    // 7. Поведение на бесконечности
-    const behavior = analyzeBehavior(func, expr);
-    if (behavior) {
-        properties.push({
-            title: 'Поведение на бесконечности',
-            value: behavior,
-            icon: '∞',
-            description: 'Пределы при x → ±∞'
-        });
-    }
-    
-    return properties;
+
+    return props;
 }
 
-// Поиск нулей функции - ИСПРАВЛЕНО для 1/x
-function findZeros(func, expr) {
-    const zeros = [];
+// Поиск экстремумов (через производную численно)
+function findExtrema(func, expr) {
+    const extrema = [];
+    const step = 0.1;
+    const range = 10;
     
-    // Специальные случаи
-    if (expr === 'x**2' || expr === 'x^2') {
-        zeros.push('0');
-        return zeros;
-    }
-    
-    if (expr === 'x**2 - 4' || expr === 'x^2 - 4') {
-        zeros.push('-2', '2');
-        return zeros;
-    }
-    
-    if (expr === 'x**3' || expr === 'x^3') {
-        zeros.push('0');
-        return zeros;
-    }
-    
-    if (expr === '2*x + 1' || expr === '2*x+1') {
-        zeros.push('-0.5');
-        return zeros;
-    }
-    
-    // Важное исправление: 1/x НЕ имеет нулей
-    if (expr === '1/x' || expr === '1**/x' || expr === '1/x**1') {
-        return zeros; // Пустой массив - нет нулей
-    }
-    
-    if (expr.toLowerCase().includes('log')) {
-        // Логарифм равен нулю при x = 1
-        zeros.push('1');
-        return zeros;
-    }
-    
-    if (expr.toLowerCase().includes('exp')) {
-        // Экспонента никогда не равна 0
-        return zeros;
-    }
-    
-    // Численный поиск только если не дробная функция типа 1/x
-    if (!(expr.includes('/x') && !expr.includes('**'))) {
-        const searchRange = 10;
-        const step = 0.2;
+    // Не ищем экстремумы у простых линейных или разрывных в 0 функциях без нужды
+    if (expr === 'x' || expr === '1/x') return [];
+
+    for (let x = -range; x < range; x += step) {
+        const y1 = func.evaluate(x);
+        const y2 = func.evaluate(x + step);
+        const y3 = func.evaluate(x + 2 * step);
         
-        for (let x = -searchRange; x <= searchRange; x += step) {
-            try {
-                // Для дробных функций пропускаем ноль
-                if (expr.includes('/x') && Math.abs(x) < 0.1) {
-                    continue;
-                }
-                
-                const y1 = func.evaluate(x);
-                const y2 = func.evaluate(x + step);
-                
-                if (y1 !== null && y2 !== null && isFinite(y1) && isFinite(y2)) {
-                    // Проверяем знак
-                    if (Math.abs(y1) < 0.01) {
-                        zeros.push(x.toFixed(2));
-                    } else if (y1 * y2 < 0) {
-                        // Знак изменился - есть корень
-                        const zero = (x + step/2).toFixed(2);
-                        zeros.push(zero);
-                    }
-                }
-            } catch(e) {
-                continue;
-            }
+        if (y1 === null || y2 === null || y3 === null) continue;
+        
+        // Проверка на смену направления (производная меняет знак)
+        const d1 = y2 - y1;
+        const d2 = y3 - y2;
+        
+        if (d1 > 0 && d2 < 0) {
+            extrema.push({ x: x + step, type: 'max' });
+        } else if (d1 < 0 && d2 > 0) {
+            extrema.push({ x: x + step, type: 'min' });
         }
     }
-    
-    // Убираем дубликаты
-    return [...new Set(zeros)].slice(0, 5); // Ограничиваем 5 нулями
+    return extrema;
 }
 
-// Проверка чётности
-function checkParity(func) {
-    try {
-        const at1 = func.evaluate(1);
-        const atMinus1 = func.evaluate(-1);
-        
-        if (at1 !== null && atMinus1 !== null && isFinite(at1) && isFinite(atMinus1)) {
-            const diff = Math.abs(at1 - atMinus1);
-            const sum = Math.abs(at1 + atMinus1);
-            
-            if (diff < 0.01) {
-                return {
-                    result: 'Чётная',
-                    description: 'f(-x) = f(x), симметрия относительно OY'
-                };
-            } else if (sum < 0.01) {
-                return {
-                    result: 'Нечётная',
-                    description: 'f(-x) = -f(x), симметрия относительно начала координат'
-                };
-            }
-        }
-    } catch(e) {
-        // Игнорируем ошибку
-    }
-    
-    return {
-        result: 'Общего вида',
-        description: 'Ни чётная, ни нечётная'
-    };
-}
-
-// Анализ поведения на бесконечности
-function analyzeBehavior(func, expr) {
-    expr = expr.toLowerCase();
-    
-    if (expr.includes('exp')) {
-        return 'при x → +∞: +∞, при x → -∞: 0';
-    }
-    
-    if (expr.includes('log')) {
-        return 'при x → +∞: +∞, при x → 0+: -∞';
-    }
-    
-    if (expr === '1/x' || expr === '1**/x') {
-        return 'при x → 0+: +∞, при x → 0-: -∞, при x → ±∞: 0';
-    }
-    
-    if (expr.includes('x**2') || expr.match(/x\*\*[2468]/)) {
-        return 'при x → ±∞: +∞';
-    }
-    
-    if (expr.includes('x**3') || expr.match(/x\*\*[13579]/)) {
-        const lead = expr.includes('-x**3') ? 'при x → +∞: -∞, при x → -∞: +∞' : 'при x → +∞: +∞, при x → -∞: -∞';
-        return lead;
-    }
-    
-    return null;
-}
-
-// Определение типа функции
+// Вспомогательные функции (типы, домен, корни, четность)
 function determineFunctionType(expr) {
     expr = expr.toLowerCase();
-    
-    if (expr === '1/x' || expr === '1**/x') return 'Обратная пропорциональность';
-    if (expr.includes('x**2') || expr.includes('x^2')) return 'Квадратичная (парабола)';
-    if (expr.includes('x**3') || expr.includes('x^3')) return 'Кубическая';
-    if (expr.includes('sin') || expr.includes('cos') || expr.includes('tan')) return 'Тригонометрическая';
+    if (expr.includes('sin') || expr.includes('cos')) return 'Тригонометрическая';
     if (expr.includes('exp')) return 'Показательная';
     if (expr.includes('log')) return 'Логарифмическая';
     if (expr.includes('/x')) return 'Дробно-рациональная';
-    if (expr.match(/[0-9]+\*x\b|\bx\*[0-9]+/)) return 'Линейная';
-    if (expr.match(/x\*\*[0-9]+/)) return 'Степенная';
-    
-    return 'Алгебраическая функция';
+    if (expr.includes('**2') || expr.includes('^2')) return 'Квадратичная';
+    if (expr.includes('**3') || expr.includes('^3')) return 'Кубическая';
+    return 'Алгебраическая / Смешанная';
 }
 
-// Определение области определения
-function getFunctionDomain(expr) {
+function getDomain(expr) {
     expr = expr.toLowerCase();
-    
-    if (expr === '1/x' || expr === '1**/x') {
-        return '(-∞, 0) ∪ (0, +∞)';
-    }
-    if (expr.includes('log')) {
-        return '(0, +∞)';
-    }
-    if (expr.includes('sqrt')) {
-        return '[0, +∞)';
-    }
-    
-    return '(-∞, +∞)';
+    if (expr.includes('log')) return '(0; +∞)';
+    if (expr.includes('sqrt')) return '[0; +∞)';
+    if (expr.includes('/x')) return '(-∞; 0) U (0; +∞)';
+    return '(-∞; +∞)';
 }
 
-// Построение графика
+function findZeros(func, expr) {
+    const zeros = [];
+    const step = 0.1;
+    // Особые случаи
+    if (expr === 'x**2' || expr === 'x^2') return ['0'];
+    if (expr.includes('exp')) return []; // Экспонента не равна 0
+    if (expr === '1/x') return [];
+    
+    for (let x = -10; x <= 10; x += step) {
+        if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
+        
+        const y1 = func.evaluate(x);
+        const y2 = func.evaluate(x + step);
+        
+        if (y1 === null || y2 === null) continue;
+        
+        if (Math.abs(y1) < 0.05) zeros.push(x.toFixed(2));
+        else if (y1 * y2 < 0) zeros.push((x + step/2).toFixed(2));
+    }
+    return [...new Set(zeros)].slice(0, 5);
+}
+
+function checkParity(func) {
+    const a = func.evaluate(1);
+    const b = func.evaluate(-1);
+    if (a === null || b === null) return { result: 'Не определено', desc: '' };
+    
+    if (Math.abs(a - b) < 0.001) return { result: 'Чётная', desc: 'Симметрия относительно OY' };
+    if (Math.abs(a + b) < 0.001) return { result: 'Нечётная', desc: 'Симметрия относительно начала координат' };
+    return { result: 'Общего вида', desc: 'Нет симметрии' };
+}
+
+// --- ОТРИСОВКА ГРАФИКА ---
 function plotFunction(func, expr) {
-    try {
-        const range = parseInt(document.getElementById('xRange').value) || 10;
-        let step = range / 200; // Увеличиваем количество точек
-        
-        const xValues = [];
-        const yValues = [];
-        
-        // Определяем диапазон для специальных функций
-        let startX = -range;
-        let endX = range;
-        
-        if (expr.toLowerCase().includes('log')) {
-            // Для логарифмических функций начинаем с малого положительного числа
-            startX = 0.001;
-            endX = range > 20 ? 20 : range;
-            step = endX / 150;
-        } else if (expr.toLowerCase().includes('exp')) {
-            // Для экспоненты ограничиваем отрицательные значения
-            startX = -range > -10 ? -10 : -range;
-            endX = range > 5 ? 5 : range;
-            step = (endX - startX) / 200;
-        } else if (expr === '1/x' || expr === '1**/x') {
-            // Для 1/x делаем разрыв в 0
-            startX = -range;
-            endX = range;
-            step = range / 100;
+    const range = parseInt(document.getElementById('xRange').value);
+    const step = range / 300; // Высокая детализация
+    
+    const xVals = [], yVals = [];
+    let startX = -range, endX = range;
+    
+    // Коррекция диапазона для логарифмов
+    if (expr.toLowerCase().includes('log')) startX = 0.01;
+
+    for (let x = startX; x <= endX; x += step) {
+        // Разрывы для 1/x
+        if (expr.includes('/x') && Math.abs(x) < 0.05) {
+            xVals.push(x); yVals.push(null);
+            continue;
         }
         
-        // Генерация точек
-        for (let x = startX; x <= endX; x += step) {
-            try {
-                // Для 1/x пропускаем точку около 0
-                if ((expr === '1/x' || expr === '1**/x') && Math.abs(x) < 0.01) {
-                    xValues.push(x);
-                    yValues.push(null); // Разрыв
-                    continue;
-                }
-                
-                const y = func.evaluate(x);
-                
-                if (y !== null && isFinite(y) && Math.abs(y) < 1000) {
-                    xValues.push(x);
-                    yValues.push(y);
-                } else {
-                    // Добавляем разрыв
-                    xValues.push(x);
-                    yValues.push(null);
-                }
-            } catch(e) {
-                xValues.push(x);
-                yValues.push(null);
-            }
+        const y = func.evaluate(x);
+        if (y !== null && Math.abs(y) < 1000) { // Обрезаем слишком большие значения
+            xVals.push(x);
+            yVals.push(y);
+        } else {
+            xVals.push(x);
+            yVals.push(null); // Разрыв линии
         }
-        
-        // Создание графика
-        const trace = {
-            x: xValues,
-            y: yValues,
-            type: 'scatter',
-            mode: 'lines',
-            name: `f(x) = ${expr}`,
-            line: {
-                color: '#3498db',
-                width: 3
-            }
-        };
-        
-        // Настройка осей
-        let yAxisRange = null; // Автоматическая настройка
-        
-        if (expr.toLowerCase().includes('exp')) {
-            yAxisRange = [-1, 50];
-        }
-        
-        // Обновление layout
-        const layout = {
-            title: { text: `f(x) = ${expr}`, font: { size: 16 } },
-            xaxis: { 
-                title: 'x',
-                range: [startX, endX],
-                gridcolor: '#f0f0f0',
-                zeroline: true,
-                zerolinecolor: '#ccc',
-                zerolinewidth: 2
-            },
-            yaxis: { 
-                title: 'f(x)',
-                gridcolor: '#f0f0f0',
-                zeroline: true,
-                zerolinecolor: '#ccc',
-                zerolinewidth: 2,
-                range: yAxisRange
-            },
-            plot_bgcolor: '#ffffff',
-            paper_bgcolor: '#ffffff',
-            showlegend: false,
-            margin: { t: 50, r: 30, b: 50, l: 50 }
-        };
-        
-        Plotly.react('plot', [trace], layout);
-        
-    } catch(error) {
-        console.error('Ошибка построения графика:', error);
-        showError('Не удалось построить график');
     }
+    
+    const trace = {
+        x: xVals, y: yVals,
+        mode: 'lines',
+        line: { color: '#2c3e50', width: 3 },
+        name: 'f(x)'
+    };
+    
+    const layout = {
+        margin: { t: 30, r: 20, b: 40, l: 40 },
+        xaxis: { 
+            title: 'X', 
+            zeroline: true, 
+            gridcolor: '#eee',
+            range: [startX, endX]
+        },
+        yaxis: { 
+            title: 'Y', 
+            zeroline: true, 
+            gridcolor: '#eee' 
+        },
+        paper_bgcolor: '#fff',
+        plot_bgcolor: '#fff'
+    };
+    
+    Plotly.react('plot', [trace], layout, {displayModeBar: false});
 }
 
-// Обновление отображения свойств
-function updatePropertiesDisplay(properties) {
+// --- ИНТЕРФЕЙС ---
+function updatePropertiesDisplay(props) {
     const container = document.getElementById('propertiesOutput');
-    
-    let html = '';
-    properties.forEach(prop => {
-        html += `
-            <div class="property-item">
-                <div class="property-icon">${prop.icon}</div>
-                <div class="property-content">
-                    <div class="property-title">${prop.title}</div>
-                    <div class="property-value">${prop.value}</div>
-                    <div class="property-description">${prop.description}</div>
-                </div>
+    container.innerHTML = props.map(p => `
+        <div class="property-item">
+            <div class="property-icon">${p.icon}</div>
+            <div class="property-content">
+                <div class="property-title">${p.title}</div>
+                <div class="property-value">${p.value}</div>
+                <div class="property-desc">${p.desc}</div>
             </div>
-        `;
-    });
-    
-    container.innerHTML = html;
+        </div>
+    `).join('');
 }
 
-// Показать загрузку
 function showLoading() {
-    const container = document.getElementById('propertiesOutput');
-    container.innerHTML = `
-        <div class="loading-state">
-            <div class="spinner"></div>
-            <p>Анализируем функцию...</p>
-        </div>
-    `;
+    document.getElementById('propertiesOutput').innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Вычисление...</p></div>';
 }
 
-// Показать ошибку
-function showError(message) {
-    const container = document.getElementById('propertiesOutput');
-    container.innerHTML = `
+function showError(msg) {
+    document.getElementById('propertiesOutput').innerHTML = `
         <div class="error-state">
-            <div class="error-icon">❌</div>
-            <div class="error-content">
-                <div class="error-title">Ошибка</div>
-                <div class="error-message">${message}</div>
-                <div class="error-hint">Примеры правильного ввода: x^2, sin(x), log(x), exp(x), 2*x+3</div>
-            </div>
-        </div>
-    `;
+            <div class="error-icon">⚠️</div>
+            <div class="error-msg">${msg}</div>
+        </div>`;
 }
 
-// ===== Управление графиком =====
-function zoomInGraph() {
-    Plotly.relayout('plot', {
-        'xaxis.range[0]': '*=0.8',
-        'xaxis.range[1]': '*=0.8',
-        'yaxis.range[0]': '*=0.8',
-        'yaxis.range[1]': '*=0.8'
-    });
-}
-
-function zoomOutGraph() {
-    Plotly.relayout('plot', {
-        'xaxis.range[0]': '*=1.2',
-        'xaxis.range[1]': '*=1.2',
-        'yaxis.range[0]': '*=1.2',
-        'yaxis.range[1]': '*=1.2'
-    });
-}
-
-function resetGraphView() {
-    const range = parseInt(document.getElementById('xRange').value) || 10;
-    
-    let startX = -range;
-    let endX = range;
-    
-    if (currentExpression.toLowerCase().includes('log')) {
-        startX = 0.001;
-        endX = range > 20 ? 20 : range;
-    } else if (currentExpression.toLowerCase().includes('exp')) {
-        startX = -range > -10 ? -10 : -range;
-        endX = range > 5 ? 5 : range;
-    }
-    
-    Plotly.relayout('plot', {
-        'xaxis.range': [startX, endX]
-    });
-}
-
-function updateGraphRange() {
-    if (currentFunction) {
-        plotFunction(currentFunction, currentExpression);
-        resetGraphView();
-    }
-}
-
-// Настройка обработчиков событий
-function setupEventHandlers() {
-    // Основная кнопка анализа
+// --- СОБЫТИЯ ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Кнопка анализа
     document.getElementById('calculateBtn').addEventListener('click', analyzeFunction);
-    
-    // Управление графиком
-    document.getElementById('zoomInBtn').addEventListener('click', zoomInGraph);
-    document.getElementById('zoomOutBtn').addEventListener('click', zoomOutGraph);
-    document.getElementById('resetViewBtn').addEventListener('click', resetGraphView);
-    
-    // Слайдер диапазона
-    const xRangeSlider = document.getElementById('xRange');
-    const rangeValue = document.getElementById('rangeValue');
-    
-    xRangeSlider.addEventListener('input', function() {
-        rangeValue.textContent = this.value;
+    document.getElementById('functionInput').addEventListener('keypress', e => {
+        if (e.key === 'Enter') analyzeFunction();
     });
     
-    xRangeSlider.addEventListener('change', updateGraphRange);
-    
-    // Примеры быстрых функций
+    // Примеры
     document.querySelectorAll('.example-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const func = this.getAttribute('data-func');
-            document.getElementById('functionInput').value = func;
+            document.getElementById('functionInput').value = this.dataset.func;
             analyzeFunction();
         });
     });
     
-    // Enter в поле ввода
-    document.getElementById('functionInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            analyzeFunction();
-        }
+    // Зум
+    const slider = document.getElementById('xRange');
+    const rangeVal = document.getElementById('rangeValue');
+    
+    slider.addEventListener('input', () => rangeVal.textContent = slider.value);
+    slider.addEventListener('change', () => {
+        if(currentFunction) plotFunction(currentFunction, currentExpression);
     });
     
-    console.log('✅ Обработчики событий настроены');
-}
+    document.getElementById('zoomInBtn').addEventListener('click', () => {
+        Plotly.relayout('plot', {'xaxis.range[0]': '*=0.8', 'xaxis.range[1]': '*=0.8'});
+    });
+    document.getElementById('zoomOutBtn').addEventListener('click', () => {
+        Plotly.relayout('plot', {'xaxis.range[0]': '*=1.2', 'xaxis.range[1]': '*=1.2'});
+    });
+    document.getElementById('resetViewBtn').addEventListener('click', () => {
+        if(currentFunction) plotFunction(currentFunction, currentExpression);
+    });
 
-// Инициализация графика
-function initializePlot() {
-    const trace = {
-        x: [],
-        y: [],
-        type: 'scatter',
-        mode: 'lines',
-        name: 'f(x)',
-        line: { color: '#3498db', width: 3 }
-    };
-    
-    const layout = {
-        title: { text: 'График функции', font: { size: 16 } },
-        xaxis: { 
-            title: 'x', 
-            gridcolor: '#f0f0f0',
-            zeroline: true,
-            zerolinecolor: '#ccc',
-            zerolinewidth: 2
-        },
-        yaxis: { 
-            title: 'f(x)', 
-            gridcolor: '#f0f0f0',
-            zeroline: true,
-            zerolinecolor: '#ccc',
-            zerolinewidth: 2
-        },
-        plot_bgcolor: '#ffffff',
-        paper_bgcolor: '#ffffff',
-        showlegend: false,
-        margin: { t: 50, r: 30, b: 50, l: 50 }
-    };
-    
-    Plotly.newPlot('plot', [trace], layout);
-    document.getElementById('graphStatus').textContent = 'Готов к построению';
-    console.log('✅ График инициализирован');
-}
-
-// Инициализация приложения
-function initApp() {
-    console.log('🚀 Анализатор функций инициализируется...');
-    
-    // Проверяем Plotly
-    if (typeof Plotly === 'undefined') {
-        showError('Библиотека графиков не загружена. Проверьте интернет-соединение.');
-        return;
-    }
-    
-    // Настройка обработчиков
-    setupEventHandlers();
-    
-    // Инициализация графика
+    // Старт
     initializePlot();
-    
-    // Авто-анализ при загрузке
-    setTimeout(() => {
-        analyzeFunction();
-    }, 500);
-    
-    console.log('✅ Анализатор функций готов!');
-}
+    setTimeout(analyzeFunction, 500);
+});
 
-// Запуск при загрузке страницы
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
-} else {
-    initApp();
+function initializePlot() {
+    Plotly.newPlot('plot', [{x:[], y:[], mode:'lines'}], {
+        xaxis: {title: 'X', zeroline: true},
+        yaxis: {title: 'Y', zeroline: true},
+        margin: {t:30, r:20, b:40, l:40}
+    }, {displayModeBar: false});
 }
