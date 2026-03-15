@@ -3,17 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Анализатор математических функций | Проект ГУУ</title>
-    
-    <!-- Plotly для графиков -->
+    <title>Анализатор функций | Проект ГУУ</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    
-    <!-- Стили -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <!-- Заголовок -->
         <header>
             <div class="header-content">
                 <h1>🧮 Анализатор функций</h1>
@@ -21,25 +16,22 @@
             </div>
         </header>
 
-        <!-- Область ввода -->
         <div class="input-section">
             <div class="input-card">
                 <h3>🔍 Ввод функции</h3>
                 <div class="input-area">
                     <input type="text" id="functionInput" 
                            placeholder="Например: x^2 - 4 или exp(x)*sin(x)"
-                           value="x^2">
+                           value="exp(x)">
                     <button id="calculateBtn" class="primary-btn">Анализировать</button>
                 </div>
                 
                 <div class="hint-box">
                     <p><strong>📝 Синтаксис:</strong></p>
                     <ul>
-                        <li>Умножение обязательно через <code>*</code>: <code>2*x</code>, не <code>2x</code></li>
+                        <li>Умножение: <code>2*x</code> (не 2x)</li>
                         <li>Степень: <code>x^2</code> или <code>x**2</code></li>
-                        <li>Функции: <code>sin(x)</code>, <code>cos(x)</code>, <code>tan(x)</code>, <code>sqrt(x)</code></li>
-                        <li>Логарифмы: <code>log(x)</code> (натуральный), <code>log10(x)</code></li>
-                        <li>Экспонента: <code>exp(x)</code> (eˣ)</li>
+                        <li>Функции: <code>sin(x)</code>, <code>exp(x)</code>, <code>log(x)</code></li>
                         <li>Константы: <code>pi</code>, <code>e</code></li>
                     </ul>
                 </div>
@@ -59,15 +51,12 @@
             </div>
         </div>
 
-        <!-- Основной контент -->
         <div class="main-content">
-            <!-- Свойства функции -->
             <div class="properties-card">
                 <div class="card-header">
                     <h3>📊 Свойства функции</h3>
                     <div class="function-display" id="currentFunction">f(x) = ...</div>
                 </div>
-                
                 <div id="propertiesOutput">
                     <div class="empty-state">
                         <div class="empty-icon">📈</div>
@@ -76,7 +65,6 @@
                 </div>
             </div>
 
-            <!-- График -->
             <div class="graph-card">
                 <div class="card-header">
                     <h3>📈 График</h3>
@@ -84,16 +72,13 @@
                         <span id="graphStatus">Ожидание...</span>
                     </div>
                 </div>
-                
                 <div id="plot" class="plot-container"></div>
-                
                 <div class="graph-controls">
                     <div class="control-group">
                         <label>Масштаб X:</label>
                         <input type="range" id="xRange" min="1" max="20" value="10" class="range-slider">
                         <span class="range-value">±<span id="rangeValue">10</span></span>
                     </div>
-                    
                     <div class="control-buttons">
                         <button id="zoomInBtn" class="control-btn">➕</button>
                         <button id="zoomOutBtn" class="control-btn">➖</button>
@@ -110,7 +95,6 @@
             </div>
         </footer>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
