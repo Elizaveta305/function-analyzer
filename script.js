@@ -1,13 +1,15 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 6.5 - Exact Zeros)
-// 13 свойств + исправленный котангенс + точные нули через π
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 8.1)
+// 11 свойств + название типа + асимптоты + sqrt(x)
 // ============================================
 
 let currentFunction = null;
 let currentExpression = '';
 let currentType = 'unknown';
 
-// --- ЯДРО: Парсер (ИСПРАВЛЕННЫЙ - с хелпером для cot) ---
+// ============================================================================
+// ЯДРО: Парсер с хелпером для котангенса
+// ============================================================================
 function parseFunction(expr) {
     const displayExpr = expr;
     currentExpression = expr;
@@ -71,7 +73,9 @@ function parseFunction(expr) {
     };
 }
 
-// === ОПРЕДЕЛЕНИЕ ТИПА ФУНКЦИИ ===
+// ============================================================================
+// ОПРЕДЕЛЕНИЕ ТИПА ФУНКЦИИ
+// ============================================================================
 function getFunctionType(expr) {
     let clean = expr.toLowerCase()
         .replace(/\s/g, '')
@@ -84,6 +88,7 @@ function getFunctionType(expr) {
     if (clean === 'x^2') return 'quadratic_origin';
     if (clean === 'x^3') return 'cubic_origin';
     if (clean === '1/x') return 'inverse';
+    if (clean === 'sqrt(x)' || clean === '√(x)') return 'sqrt';
     
     if (clean.includes('tan(')) return 'tan';
     if (clean.includes('cot(')) return 'cot';
@@ -91,6 +96,7 @@ function getFunctionType(expr) {
     if (clean.includes('cos(')) return 'cos';
     if (clean.includes('exp(')) return 'exp';
     if (clean.includes('log(') || clean.includes('ln(')) return 'log';
+    if (clean.includes('sqrt(')) return 'sqrt';
     
     if (clean.includes('x^2')) return 'quadratic_general';
     if (clean.includes('x^3')) return 'cubic_general';
@@ -100,7 +106,46 @@ function getFunctionType(expr) {
     return 'unknown';
 }
 
-// === БАЗА ЗНАНИЙ (с символьными нулями через π) ===
+// ============================================================================
+// ПОЛУЧЕНИЕ ЧИТАЕМОГО НАЗВАНИЯ ТИПА ФУНКЦИИ
+// ============================================================================
+function getFunctionTypeName(type) {
+    const names = {
+        'linear_origin': 'Линейная функция',
+        'quadratic_origin': 'Квадратичная функция (парабола)',
+        'cubic_origin': 'Кубическая функция',
+        'inverse': 'Обратная пропорциональность',
+        'sqrt': 'Функция квадратного корня',
+        'tan': 'Тангенс',
+        'cot': 'Котангенс',
+        'sin': 'Синус',
+        'cos': 'Косинус',
+        'exp': 'Показательная функция (экспонента)',
+        'log': 'Логарифмическая функция',
+        'quadratic_general': 'Квадратичная функция',
+        'cubic_general': 'Кубическая функция',
+        'rational': 'Дробно-рациональная функция',
+        'polynomial': 'Полиномиальная функция',
+        'unknown': 'Сложная / комбинированная функция'
+    };
+    return names[type] || 'Функция';
+}
+
+// ============================================================================
+// ПРОВЕРКА: Линейная функция?
+// ============================================================================
+function isLinearFunction(expr) {
+    const clean = expr.toLowerCase().replace(/\s/g, '');
+    if (/^([+-]?\d*\.?\d*\*)?x([+-]\d*\.?\d+)?$/.test(clean)) return true;
+    if (/^x([+-]\d*\.?\d+)?$/.test(clean)) return true;
+    if (/^[+-]?\d*\.?\d*\*x$/.test(clean)) return true;
+    if (/^[+-]?\d+\.?\d*$/.test(clean)) return 'constant';
+    return false;
+}
+
+// ============================================================================
+// БАЗА ЗНАНИЙ (включая sqrt)
+// ============================================================================
 const ANALYTICAL_DATA = {
     'linear_origin': {
         range: '(-∞; +∞)',
@@ -108,12 +153,11 @@ const ANALYTICAL_DATA = {
         bounded: 'Не ограничена',
         extremes: 'Не имеет (±∞)',
         continuity: 'Непрерывна на всей области',
-        convexity: null,
         monotonicity: 'Возрастает на всей области',
-        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
-        domain: '(-∞; +∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: [0]
+        domain: '(-∞; +∞)',
+        zeros: [0],
+        asymptotes: 'Нет'
     },
     'quadratic_origin': {
         range: '[0; +∞)',
@@ -121,12 +165,11 @@ const ANALYTICAL_DATA = {
         bounded: 'Ограничена снизу',
         extremes: 'min: 0 (при x=0), max: +∞',
         continuity: 'Непрерывна на всей области',
-        convexity: { text: 'Выпукла вниз', desc: 'На всей области (a>0)' },
         monotonicity: 'Убывает при x<0, возрастает при x>0',
-        localExtrema: { text: 'Минимум при x=0', desc: 'Единственная точка экстремума' },
-        domain: '(-∞; +∞)',
         parity: { result: 'Чётная', desc: 'Симметрия относительно оси OY' },
-        zeros: [0]
+        domain: '(-∞; +∞)',
+        zeros: [0],
+        asymptotes: 'Нет'
     },
     'cubic_origin': {
         range: '(-∞; +∞)',
@@ -134,12 +177,11 @@ const ANALYTICAL_DATA = {
         bounded: 'Не ограничена',
         extremes: 'Не имеет (±∞)',
         continuity: 'Непрерывна на всей области',
-        convexity: { text: 'Меняет выпуклость', desc: 'Перегиб в точке x=0' },
         monotonicity: 'Возрастает на всей области',
-        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
-        domain: '(-∞; +∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: [0]
+        domain: '(-∞; +∞)',
+        zeros: [0],
+        asymptotes: 'Нет'
     },
     'inverse': {
         range: '(-∞; 0) ∪ (0; +∞)',
@@ -147,25 +189,35 @@ const ANALYTICAL_DATA = {
         bounded: 'Не ограничена',
         extremes: 'Не имеет (±∞)',
         continuity: 'Разрывна при x=0',
-        convexity: { text: 'Разная на промежутках', desc: 'Выпукла вниз при x>0, вверх при x<0' },
         monotonicity: 'Убывает на (-∞; 0) и на (0; +∞)',
-        localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' },
-        domain: '(-∞; 0) ∪ (0; +∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: []
+        domain: '(-∞; 0) ∪ (0; +∞)',
+        zeros: [],
+        asymptotes: 'Вертикальная: x=0; Горизонтальная: y=0'
+    },
+    'sqrt': {
+        range: '[0; +∞)',
+        sign: 'f(x)=0 при x=0; f(x)>0 при x∈(0; +∞)',
+        bounded: 'Ограничена снизу (y≥0)',
+        extremes: 'min: 0 (при x=0), max: не имеет',
+        continuity: 'Непрерывна на [0; +∞)',
+        monotonicity: 'Строго возрастает на всей области',
+        parity: { result: 'Общего вида', desc: 'Область определения не симметрична' },
+        domain: '[0; +∞)',
+        zeros: [0],
+        asymptotes: 'Нет'
     },
     'exp': {
         range: '(0; +∞)',
-        sign: 'f(x)>0 при x∈(-∞; +∞)',
-        bounded: 'Ограничена снизу',
+        sign: 'f(x)>0 при всех x',
+        bounded: 'Ограничена снизу (y>0)',
         extremes: 'min: 0 (асимптота), max: +∞',
         continuity: 'Непрерывна на всей области',
-        convexity: { text: 'Выпукла вниз', desc: 'На всей области' },
         monotonicity: 'Возрастает на всей области',
-        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
-        domain: '(-∞; +∞)',
         parity: { result: 'Общего вида', desc: 'Нет симметрии' },
-        zeros: []
+        domain: '(-∞; +∞)',
+        zeros: [],
+        asymptotes: 'Горизонтальная: y=0 (при x→-∞)'
     },
     'log': {
         range: '(-∞; +∞)',
@@ -173,38 +225,37 @@ const ANALYTICAL_DATA = {
         bounded: 'Не ограничена',
         extremes: 'Не имеет (±∞)',
         continuity: 'Непрерывна на (0; +∞)',
-        convexity: { text: 'Выпукла вверх', desc: 'На всей области' },
         monotonicity: 'Возрастает на всей области',
-        localExtrema: { text: 'Отсутствуют', desc: 'Функция монотонна' },
-        domain: '(0; +∞)',
         parity: { result: 'Общего вида', desc: 'Нет симметрии' },
-        zeros: [1]
+        domain: '(0; +∞)',
+        zeros: [1],
+        asymptotes: 'Вертикальная: x=0'
     },
     'sin': {
         range: '[-1; 1]',
         sign: 'Периодически меняется знак',
-        bounded: 'Ограничена (сверху и снизу)',
+        bounded: 'Ограничена: -1 ≤ f(x) ≤ 1',
         extremes: 'min: -1, max: 1',
         continuity: 'Непрерывна на всей области',
-        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
         monotonicity: 'Не монотонна (периодическая)',
-        localExtrema: { text: 'Максимумы при π/2+2πn, Минимумы при -π/2+2πn', desc: 'Бесконечное кол-во' },
-        domain: '(-∞; +∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: ['0', 'π', '-π', '2π', '-2π']
+        domain: '(-∞; +∞)',
+        zeros: ['0', 'π', '-π', '2π', '-2π'],
+        asymptotes: 'Нет',
+        period: '2π'
     },
     'cos': {
         range: '[-1; 1]',
         sign: 'Периодически меняется знак',
-        bounded: 'Ограничена (сверху и снизу)',
+        bounded: 'Ограничена: -1 ≤ f(x) ≤ 1',
         extremes: 'min: -1, max: 1',
         continuity: 'Непрерывна на всей области',
-        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
         monotonicity: 'Не монотонна (периодическая)',
-        localExtrema: { text: 'Максимумы при 2πn, Минимумы при π+2πn', desc: 'Бесконечное кол-во' },
-        domain: '(-∞; +∞)',
         parity: { result: 'Чётная', desc: 'Симметрия относительно оси OY' },
-        zeros: ['π/2', '-π/2', '3π/2', '-3π/2']
+        domain: '(-∞; +∞)',
+        zeros: ['π/2', '-π/2', '3π/2', '-3π/2'],
+        asymptotes: 'Нет',
+        period: '2π'
     },
     'tan': {
         range: '(-∞; +∞)',
@@ -212,12 +263,12 @@ const ANALYTICAL_DATA = {
         bounded: 'Не ограничена',
         extremes: 'Не имеет (±∞)',
         continuity: 'Разрывна при x = π/2 + πn',
-        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
-        monotonicity: 'Не монотонна (периодическая)',
-        localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' },
-        domain: 'Все x, кроме π/2 + πn',
+        monotonicity: 'Возрастает на каждом промежутке непрерывности',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: ['0', 'π', '-π', '2π', '-2π']
+        domain: 'Все x, кроме π/2 + πn',
+        zeros: ['0', 'π', '-π', '2π', '-2π'],
+        asymptotes: 'Вертикальные: x = π/2 + πn',
+        period: 'π'
     },
     'cot': {
         range: '(-∞; +∞)',
@@ -225,21 +276,22 @@ const ANALYTICAL_DATA = {
         bounded: 'Не ограничена',
         extremes: 'Не имеет (±∞)',
         continuity: 'Разрывна при x = πn',
-        convexity: { text: 'Периодически меняется', desc: 'Есть промежутки выпуклости и вогнутости' },
-        monotonicity: 'Не монотонна (периодическая)',
-        localExtrema: { text: 'Отсутствуют', desc: 'Нет точек экстремума' },
-        domain: 'Все x, кроме πn',
+        monotonicity: 'Убывает на каждом промежутке непрерывности',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
-        zeros: ['π/2', '-π/2', '3π/2', '-3π/2']
+        domain: 'Все x, кроме πn',
+        zeros: ['π/2', '-π/2', '3π/2', '-3π/2'],
+        asymptotes: 'Вертикальные: x = πn',
+        period: 'π'
     }
 };
 
-// === ФОРМАТИРОВАНИЕ НУЛЕЙ С ПОДДЕРЖКОЙ π ===
+// ============================================================================
+// ФОРМАТИРОВАНИЕ НУЛЕЙ С ПОДДЕРЖКОЙ π
+// ============================================================================
 function formatZeros(zeros, type) {
-    // Для тригонометрических функций — символьное представление
     if (['sin', 'cos', 'tan', 'cot'].includes(type)) {
         return zeros.map(z => {
-            if (typeof z === 'string') return z; // уже символьное
+            if (typeof z === 'string') return z;
             const num = typeof z === 'string' ? parseFloat(z) : z;
             if (isNaN(num)) return String(z);
             if (Math.abs(num) < 0.01) return '0';
@@ -252,16 +304,16 @@ function formatZeros(zeros, type) {
             if (Math.abs(num - 3*Math.PI/2) < 0.01) return '3π/2';
             if (Math.abs(num + 3*Math.PI/2) < 0.01) return '-3π/2';
             if (Math.abs(num - Math.PI/4) < 0.01) return 'π/4';
-            if (Math.abs(num + Math.PI/4) < 0.01) return '-π/4';
             return formatNumber(num);
         }).join(', ');
     }
-    // Для остальных — числовое форматирование
     if (!zeros || zeros.length === 0) return 'Нет действительных корней';
     return zeros.map(z => formatNumber(z)).join(', ');
 }
 
-// === ОСНОВНАЯ ЛОГИКА ===
+// ============================================================================
+// ОСНОВНАЯ ЛОГИКА
+// ============================================================================
 function analyzeFunction() {
     const input = document.getElementById('functionInput');
     let expr = input.value.trim();
@@ -282,7 +334,7 @@ function analyzeFunction() {
             let isValid = false;
             let testPoints = [];
             
-            if (type === 'log') testPoints = [1, 2, Math.E];
+            if (type === 'log' || type === 'sqrt') testPoints = [1, 2, 4];
             else if (type === 'tan' || type === 'cot') testPoints = [0.7, 1.2, 2.3];
             else testPoints = [-2, -1, 0, 1, 2];
             
@@ -316,53 +368,84 @@ function analyzeFunction() {
     }, 50);
 }
 
-// === АНАЛИЗ 13 СВОЙСТВ ===
+// ============================================================================
+// АНАЛИЗ 11 СВОЙСТВ + НАЗВАНИЕ ТИПА
+// ============================================================================
 function analyzeFunctionProperties(expr, func, type) {
     const props = [];
     const data = ANALYTICAL_DATA[type];
     
-    props.push({ title: '1. Область определения', value: data ? data.domain : getDomain(expr, type), icon: '🌐', desc: 'D(f)' });
-    props.push({ title: '2. Область значений', value: data ? data.range : calculateRangeNumerically(func), icon: '📏', desc: 'E(f)' });
+    // 🔹 Название типа функции (первым пунктом)
+    const typeName = getFunctionTypeName(type);
+    props.push({ title: 'Тип функции', value: typeName, icon: '📊', desc: 'Классификация' });
     
-    // 🔧 Используем новое форматирование нулей
+    // 1. Область определения
+    props.push({ title: '1. Область определения', value: data ? data.domain : getDomain(expr, type), icon: '🌐', desc: 'D(f)' });
+    
+    // 2. Область значений
+    props.push({ title: '2. Область значений', value: data ? data.range : calculateRangeNumerically(func, expr), icon: '📏', desc: 'E(f)' });
+    
+    // 3. Нули функции
     const zeros = data ? data.zeros : findZeros(func, expr, type);
     const zerosText = formatZeros(zeros, type);
     props.push({ title: '3. Нули функции', value: zerosText, icon: '⚫', desc: 'f(x) = 0' });
-
-    const y0 = func.evaluate(0);
-    if (y0 !== null && isFinite(y0)) {
-        if (Math.abs(y0) > 0.01 || (zeros && zeros.length === 0)) {
-            props.push({ title: '4. Пересечение с OY', value: `(0; ${formatNumber(y0)})`, icon: '🔵', desc: 'При x = 0' });
-        }
-    }
-
-    const parity = data ? data.parity : checkParity(func, type);
-    props.push({ title: '5. Четность', value: parity.result, icon: '🔄', desc: parity.desc });
-    props.push({ title: '6. Монотонность', value: data ? data.monotonicity : calculateMonotonicityNumerically(func), icon: '📈', desc: 'Характер изменения' });
-    props.push({ title: '7. Знакопостоянство', value: data ? data.sign : calculateSignIntervalsNumerically(func, expr), icon: '➕➖', desc: 'Интервалы знака' });
-    props.push({ title: '8. Ограниченность', value: data ? data.bounded : calculateBoundednessNumerically(func), icon: '🔒', desc: 'Наличие границ' });
-    props.push({ title: '9. Наим. и наиб. значение', value: data ? data.extremes : calculateExtremesNumerically(func), icon: '🏆', desc: 'Экстремумы на ℝ' });
-    props.push({ title: '10. Непрерывность', value: data ? data.continuity : getContinuityValue(expr, type), icon: '〰️', desc: 'Точки разрыва' });
     
-    const convexInfo = data ? data.convexity : calculateConvexityNumerically(func, expr);
-    if (convexInfo) {
-        props.push({ title: '11. Выпуклость', value: convexInfo.text, icon: '📉', desc: convexInfo.desc });
-    }
-
+    // 4. Монотонность
+    props.push({ title: '4. Монотонность', value: data ? data.monotonicity : calculateMonotonicityNumerically(func), icon: '📈', desc: 'Промежутки возрастания/убывания' });
+    
+    // 5. Знакопостоянство
+    props.push({ title: '5. Знакопостоянство', value: data ? data.sign : calculateSignIntervalsNumerically(func, expr), icon: '➕➖', desc: 'Где функция положительна/отрицательна' });
+    
+    // 6. Макс и мин значения
+    props.push({ title: '6. Наиб. и наим. значения', value: data ? data.extremes : calculateExtremesNumerically(func), icon: '🏆', desc: 'Экстремумы функции' });
+    
+    // 7. Четность
+    const parity = data ? data.parity : checkParity(func, type);
+    props.push({ title: '7. Чётность', value: parity.result, icon: '🔄', desc: parity.desc });
+    
+    // 8. Непрерывность
+    props.push({ title: '8. Непрерывность', value: data ? data.continuity : getContinuityValue(expr, type), icon: '〰️', desc: 'Точки разрыва' });
+    
+    // 9. Ограниченность
+    props.push({ title: '9. Ограниченность', value: data ? data.bounded : calculateBoundednessNumerically(func), icon: '🔒', desc: 'Наличие границ' });
+    
+    // 10. Асимптоты
+    props.push({ title: '10. Асимптоты', value: data ? data.asymptotes : findAsymptotes(expr, type), icon: '↗️', desc: 'Линии, к которым стремится график' });
+    
+    // 11. Периодичность (только для тригонометрии)
     if (['sin', 'cos', 'tan', 'cot'].includes(type)) {
-        const period = (type === 'tan' || type === 'cot') ? 'π' : '2π';
-        props.push({ title: '12. Периодичность', value: `Периодическая (T=${period})`, icon: '⏱️', desc: 'Повторяется через промежуток' });
-    } else {
-        props.push({ title: '12. Периодичность', value: 'Не периодическая', icon: '⏱️', desc: 'Не имеет периода' });
+        const period = data ? data.period : (type === 'tan' || type === 'cot' ? 'π' : '2π');
+        props.push({ title: '11. Периодичность', value: `Периодическая (T=${period})`, icon: '⏱️', desc: 'Повторяется через промежуток' });
     }
-
-    const extremaInfo = data ? data.localExtrema : calculateLocalExtremaNumerically(func, expr);
-    props.push({ title: '13. Локальные экстремумы', value: extremaInfo.text, icon: '🏔️', desc: extremaInfo.desc });
 
     return props;
 }
 
-// === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===
+// ============================================================================
+// ПОИСК АСИМПТОТ
+// ============================================================================
+function findAsymptotes(expr, type) {
+    const lower = expr.toLowerCase();
+    
+    if (lower.includes('/x') || type === 'inverse') return 'Вертикальная: x=0';
+    if (type === 'tan') return 'Вертикальные: x = π/2 + πn';
+    if (type === 'cot') return 'Вертикальные: x = πn';
+    if (lower.includes('log')) return 'Вертикальная: x=0';
+    if (lower.includes('exp')) return 'Горизонтальная: y=0 (при x→-∞)';
+    
+    const yInf = currentFunction ? currentFunction.evaluate(1000) : null;
+    const yNegInf = currentFunction ? currentFunction.evaluate(-1000) : null;
+    
+    if (yInf !== null && Math.abs(yInf) < 10 && yNegInf !== null && Math.abs(yNegInf) < 10) {
+        if (Math.abs(yInf - yNegInf) < 1) return `Горизонтальная: y≈${formatNumber(yInf)}`;
+    }
+    
+    return 'Нет';
+}
+
+// ============================================================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ: Форматирование
+// ============================================================================
 function formatNumber(num) {
     if (num === null || num === undefined) return '0';
     const number = typeof num === 'string' ? parseFloat(num) : Number(num);
@@ -377,9 +460,26 @@ function safeToFixed(value, decimals = 1) {
     return num.toFixed(decimals);
 }
 
-function calculateRangeNumerically(func) {
+// ============================================================================
+// ЧИСЛЕННЫЕ МЕТОДЫ
+// ============================================================================
+function calculateRangeNumerically(func, expr) {
+    const linearCheck = isLinearFunction(expr);
+    if (linearCheck === true) return '(-∞; +∞)';
+    if (linearCheck === 'constant') {
+        const val = func.evaluate(0);
+        return val !== null ? `{${formatNumber(val)}}` : 'Не определено';
+    }
+    
+    const lower = expr.toLowerCase();
+    if (lower.includes('sin') || lower.includes('cos')) return '[-1; 1]';
+    if (lower.includes('exp')) return '(0; +∞)';
+    if (lower.includes('log')) return '(-∞; +∞)';
+    if (lower.includes('sqrt')) return '[0; +∞)';
+    if (lower.includes('x^2') || lower.includes('x**2') || lower.includes('^2')) return '[0; +∞)';
+    
     let min = Infinity, max = -Infinity;
-    for (let x = -20; x <= 20; x += 0.1) {
+    for (let x = -50; x <= 50; x += 0.1) {
         const y = func.evaluate(x);
         if (y !== null && isFinite(y)) {
             if (y < min) min = y;
@@ -387,6 +487,8 @@ function calculateRangeNumerically(func) {
         }
     }
     if (min === Infinity) return 'Не определено';
+    if (max - min > 1000) return '(-∞; +∞)';
+    
     let minStr = (min < -1000) ? '-∞' : formatNumber(min);
     let maxStr = (max > 1000) ? '+∞' : formatNumber(max);
     return `[${minStr}; ${maxStr}]`;
@@ -437,25 +539,6 @@ function calculateExtremesNumerically(func) {
     return `min: ${minStr}, max: ${maxStr}`;
 }
 
-function calculateConvexityNumerically(func, expr) {
-    let up = 0, down = 0;
-    for (let x of [-5, -2, 2, 5]) {
-        if (expr.includes('/x') && Math.abs(x) < 1) continue;
-        const y_m = func.evaluate(x - 0.5);
-        const y_0 = func.evaluate(x);
-        const y_p = func.evaluate(x + 0.5);
-        if (y_m !== null && y_0 !== null && y_p !== null) {
-            const d2 = y_p - 2*y_0 + y_m;
-            if (d2 > 0.01) up++;
-            if (d2 < -0.01) down++;
-        }
-    }
-    if (up > 0 && down === 0) return { text: 'Выпукла вниз', desc: 'На проанализированных промежутках' };
-    if (down > 0 && up === 0) return { text: 'Выпукла вверх', desc: 'На проанализированных промежутках' };
-    if (up > 0 && down > 0) return { text: 'Имеет перегибы', desc: 'Меняет направление' };
-    return { text: 'Сложная форма', desc: 'Трудно определить' };
-}
-
 function calculateMonotonicityNumerically(func) {
     let inc = 0, dec = 0;
     for (let x of [-5, -1, 1, 5]) {
@@ -466,32 +549,16 @@ function calculateMonotonicityNumerically(func) {
             else if (y2 < y1) dec++;
         }
     }
-    if (inc > 0 && dec === 0) return 'Возрастает';
-    if (dec > 0 && inc === 0) return 'Убывает';
-    return 'Не монотонна';
+    if (inc > 0 && dec === 0) return 'Возрастает на всей области';
+    if (dec > 0 && inc === 0) return 'Убывает на всей области';
+    return 'Не монотонна (меняет характер)';
 }
 
-function calculateLocalExtremaNumerically(func, expr) {
-    const extrema = [];
-    for (let x = -10; x < 10; x += 0.2) {
-        const y1 = func.evaluate(x);
-        const y2 = func.evaluate(x + 0.2);
-        const y3 = func.evaluate(x + 0.4);
-        if (y1 === null || y2 === null || y3 === null) continue;
-        const d1 = y2 - y1;
-        const d2 = y3 - y2;
-        if (d1 > 0.01 && d2 < -0.01) extrema.push({ x: x + 0.2, type: 'max' });
-        else if (d1 < -0.01 && d2 > 0.01) extrema.push({ x: x + 0.2, type: 'min' });
-    }
-    if (extrema.length > 0) {
-        const extText = extrema.map(e => `${e.type === 'max' ? 'Макс' : 'Мин'} при x=${formatNumber(e.x)}`).join('; ');
-        return { text: extText, desc: 'На промежутке [-10; 10]' };
-    }
-    return { text: 'Отсутствуют', desc: 'Не найдено на проанализированном промежутке' };
-}
-
+// ============================================================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ: Домен, нули, четность, непрерывность
+// ============================================================================
 function getDomain(expr, type) {
-    if (type === 'log') return '(0; +∞)';
+    if (type === 'log' || type === 'sqrt') return '[0; +∞)';
     if (type === 'inverse' || expr.includes('/x')) return '(-∞; 0) ∪ (0; +∞)';
     if (type === 'tan') return 'Все x, кроме π/2 + πn';
     if (type === 'cot') return 'Все x, кроме πn';
@@ -500,18 +567,17 @@ function getDomain(expr, type) {
 }
 
 function findZeros(func, expr, type) {
-    // 🔧 Символьные нули для стандартных тригонометрических функций
     if (type === 'sin') return ['0', 'π', '-π', '2π', '-2π'];
     if (type === 'cos') return ['π/2', '-π/2', '3π/2', '-3π/2'];
     if (type === 'tan') return ['0', 'π', '-π', '2π', '-2π'];
     if (type === 'cot') return ['π/2', '-π/2', '3π/2', '-3π/2'];
+    if (type === 'sqrt') return [0];
     
     if (type === 'exp') return [];
     if (type === 'inverse') return [];
     if (type === 'log') return [1];
     if (['linear_origin', 'cubic_origin', 'quadratic_origin'].includes(type)) return [0];
     
-    // Численный поиск для сложных функций
     const rawZeros = [];
     for (let x = -10; x <= 10; x += 0.1) {
         if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
@@ -536,6 +602,8 @@ function checkParity(func, type) {
         return { result: 'Нечётная', desc: 'Симметрия относительно начала координат' };
     if (['quadratic_origin', 'cos'].includes(type))
         return { result: 'Чётная', desc: 'Симметрия относительно оси OY' };
+    if (type === 'sqrt' || type === 'log' || type === 'exp')
+        return { result: 'Общего вида', desc: 'Область определения не симметрична' };
     
     const a = func.evaluate(1);
     const b = func.evaluate(-1);
@@ -548,17 +616,24 @@ function checkParity(func, type) {
 function getContinuityValue(expr, type) {
     if (expr.includes('/x')) return 'Разрывна при x=0';
     if (type === 'log') return 'Непрерывна на (0; +∞)';
+    if (type === 'sqrt') return 'Непрерывна на [0; +∞)';
+    if (type === 'tan') return 'Разрывна при π/2 + πn';
+    if (type === 'cot') return 'Разрывна при πn';
     return 'Непрерывна (предположительно)';
 }
 
-// === ГРАФИК ===
+// ============================================================================
+// ПОСТРОЕНИЕ ГРАФИКА
+// ============================================================================
 function plotFunction(func, expr, type) {
     const range = parseInt(document.getElementById('xRange').value);
     const step = range / 500;
     const xVals = [], yVals = [];
     let startX = -range, endX = range;
     
+    // 🔧 Для sqrt и log начинаем с 0 или малого положительного
     if (type === 'log') startX = 0.01;
+    if (type === 'sqrt') startX = 0;
 
     const isTan = (type === 'tan');
     const isCot = (type === 'cot');
@@ -610,7 +685,9 @@ function plotFunction(func, expr, type) {
     }
 }
 
-// === UI ===
+// ============================================================================
+// ИНТЕРФЕЙС
+// ============================================================================
 function updatePropertiesDisplay(props) {
     const container = document.getElementById('propertiesOutput');
     if (!container) return;
@@ -629,7 +706,7 @@ function updatePropertiesDisplay(props) {
 function showLoading() {
     const container = document.getElementById('propertiesOutput');
     if (!container) return;
-    container.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Анализ 13 свойств...</p></div>';
+    container.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Анализ свойств...</p></div>';
 }
 
 function showError(msg) {
@@ -638,6 +715,9 @@ function showError(msg) {
     container.innerHTML = `<div class="error-state"><div class="error-icon">⚠️</div><div class="error-msg">${msg}</div></div>`;
 }
 
+// ============================================================================
+// ИНИЦИАЛИЗАЦИЯ
+// ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
     const calcBtn = document.getElementById('calculateBtn');
     const funcInput = document.getElementById('functionInput');
