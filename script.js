@@ -1,6 +1,6 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 9.0)
-// Универсальные шаблоны для сдвигов всех функций
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 9.1)
+// Полная версия со всеми свойствами
 // ============================================
 
 let currentFunction = null;
@@ -66,21 +66,19 @@ function parseFunction(expr) {
 }
 
 // ============================================================================
-// АНАЛИЗ СДВИГОВ: Определяет тип сдвига и значения
+// АНАЛИЗ СДВИГОВ
 // ============================================================================
 function analyzeShift(expr, baseType) {
     const clean = expr.toLowerCase().replace(/\s/g, '');
-    let verticalShift = 0;  // +a outside: f(x) + a
-    let horizontalShift = 0; // +a inside: f(x + a)
+    let verticalShift = 0;
+    let horizontalShift = 0;
     
-    // 🔍 Поиск вертикального сдвига: f(...) + number или f(...) - number
     const outerMatch = clean.match(new RegExp(`${baseType}\\([^)]+\\)([+-])(\\d+\\.?\\d*)`));
     if (outerMatch) {
         const sign = outerMatch[1] === '+' ? 1 : -1;
         verticalShift = sign * parseFloat(outerMatch[2]);
     }
     
-    // 🔍 Поиск горизонтального сдвига: f(x + number) или f(x - number)
     const innerMatch = clean.match(new RegExp(`${baseType}\\(\\s*x\\s*([+-])\\s*(\\d+\\.?\\d*)\\s*\\)`));
     if (innerMatch) {
         const sign = innerMatch[1] === '+' ? 1 : -1;
@@ -142,16 +140,14 @@ function getFunctionTypeName(type, shift) {
     };
     
     let name = names[type] || 'Функция';
-    
     if (shift.verticalShift !== 0 || shift.horizontalShift !== 0) {
         name += ' (со сдвигом)';
     }
-    
     return name;
 }
 
 // ============================================================================
-// БАЗОВЫЕ СВОЙСТВА ФУНКЦИЙ (без сдвигов)
+// БАЗОВЫЕ СВОЙСТВА ФУНКЦИЙ
 // ============================================================================
 const BASE_PROPERTIES = {
     'linear': {
@@ -159,6 +155,7 @@ const BASE_PROPERTIES = {
         range: '(-∞; +∞)',
         zeros: [0],
         monotonicity: 'Возрастает при x∈(-∞; +∞)',
+        sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
         extremes: 'Не имеет (±∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
         continuity: 'Непрерывна на всей области',
@@ -170,6 +167,7 @@ const BASE_PROPERTIES = {
         range: '[0; +∞)',
         zeros: [0],
         monotonicity: 'Убывает при x∈(-∞; 0), возрастает при x∈(0; +∞)',
+        sign: 'f(x)>0 при x∈(-∞; 0)∪(0; +∞); f(x)=0 при x=0',
         extremes: 'min: 0 (при x=0), max: не имеет',
         parity: { result: 'Чётная', desc: 'Симметрия относительно оси OY' },
         continuity: 'Непрерывна на всей области',
@@ -181,6 +179,7 @@ const BASE_PROPERTIES = {
         range: '(-∞; +∞)',
         zeros: [0],
         monotonicity: 'Возрастает при x∈(-∞; +∞)',
+        sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
         extremes: 'Не имеет (±∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
         continuity: 'Непрерывна на всей области',
@@ -192,6 +191,7 @@ const BASE_PROPERTIES = {
         range: '(-∞; 0) ∪ (0; +∞)',
         zeros: [],
         monotonicity: 'Убывает при x∈(-∞; 0) и при x∈(0; +∞)',
+        sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
         extremes: 'Не имеет (±∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
         continuity: 'Разрывна при x=0',
@@ -203,6 +203,7 @@ const BASE_PROPERTIES = {
         range: '[0; +∞)',
         zeros: [0],
         monotonicity: 'Строго возрастает при x∈[0; +∞)',
+        sign: 'f(x)=0 при x=0; f(x)>0 при x∈(0; +∞)',
         extremes: 'min: 0 (при x=0), max: не имеет',
         parity: { result: 'Общего вида', desc: 'Область определения не симметрична' },
         continuity: 'Непрерывна на [0; +∞)',
@@ -214,6 +215,7 @@ const BASE_PROPERTIES = {
         range: '(0; +∞)',
         zeros: [],
         monotonicity: 'Возрастает при x∈(-∞; +∞)',
+        sign: 'f(x)>0 при всех x',
         extremes: 'min: не имеет, max: не имеет',
         parity: { result: 'Общего вида', desc: 'Нет симметрии' },
         continuity: 'Непрерывна на всей области',
@@ -225,6 +227,7 @@ const BASE_PROPERTIES = {
         range: '(-∞; +∞)',
         zeros: [1],
         monotonicity: 'Возрастает при x∈(0; +∞)',
+        sign: 'f(x)>0 при x∈(1; +∞); f(x)<0 при x∈(0; 1)',
         extremes: 'Не имеет (±∞)',
         parity: { result: 'Общего вида', desc: 'Нет симметрии' },
         continuity: 'Непрерывна на (0; +∞)',
@@ -236,6 +239,7 @@ const BASE_PROPERTIES = {
         range: '[-1; 1]',
         zeros: ['0', 'π', '-π', '2π', '-2π'],
         monotonicity: 'Не монотонна (периодическая)',
+        sign: 'Периодически меняется знак',
         extremes: 'min: -1, max: 1',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
         continuity: 'Непрерывна на всей области',
@@ -248,6 +252,7 @@ const BASE_PROPERTIES = {
         range: '[-1; 1]',
         zeros: ['π/2', '-π/2', '3π/2', '-3π/2'],
         monotonicity: 'Не монотонна (периодическая)',
+        sign: 'Периодически меняется знак',
         extremes: 'min: -1, max: 1',
         parity: { result: 'Чётная', desc: 'Симметрия относительно оси OY' },
         continuity: 'Непрерывна на всей области',
@@ -260,6 +265,7 @@ const BASE_PROPERTIES = {
         range: '(-∞; +∞)',
         zeros: ['0', 'π', '-π', '2π', '-2π'],
         monotonicity: 'Возрастает на каждом промежутке непрерывности',
+        sign: 'Периодически меняется знак',
         extremes: 'Не имеет (±∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
         continuity: 'Разрывна при x = π/2 + πn',
@@ -272,6 +278,7 @@ const BASE_PROPERTIES = {
         range: '(-∞; +∞)',
         zeros: ['π/2', '-π/2', '3π/2', '-3π/2'],
         monotonicity: 'Убывает на каждом промежутке непрерывности',
+        sign: 'Периодически меняется знак',
         extremes: 'Не имеет (±∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
         continuity: 'Разрывна при x = πn',
@@ -282,14 +289,14 @@ const BASE_PROPERTIES = {
 };
 
 // ============================================================================
-// ПРИМЕНЕНИЕ СДВИГОВ К СВОЙСТВАМ (УНИВЕРСАЛЬНЫЕ ШАБЛОНЫ)
+// ПРИМЕНЕНИЕ СДВИГОВ К СВОЙСТВАМ
 // ============================================================================
 function applyShiftToProperties(baseProps, shift, type) {
     const props = { ...baseProps };
     const v = shift.verticalShift;
     const h = shift.horizontalShift;
     
-    // 🔹 1. Область определения (сдвиг по OX влияет)
+    // 1. Область определения
     if (h !== 0) {
         if (type === 'sqrt') {
             props.domain = `[${formatNumber(-h)}; +∞)`;
@@ -304,7 +311,7 @@ function applyShiftToProperties(baseProps, shift, type) {
         }
     }
     
-    // 🔹 2. Область значений (сдвиг по OY влияет)
+    // 2. Область значений
     if (v !== 0) {
         if (type === 'sqrt') {
             props.range = `[${formatNumber(v)}; +∞)`;
@@ -317,20 +324,18 @@ function applyShiftToProperties(baseProps, shift, type) {
         }
     }
     
-    // 🔹 3. Нули функции (решаем f(x) + v = 0 или f(x+h) = 0)
+    // 3. Нули функции
     if (type === 'sqrt') {
         if (v > 0) {
-            props.zeros = []; // sqrt(x+h) + v = 0 → нет решений при v > 0
+            props.zeros = [];
         } else if (v === 0) {
             props.zeros = [h !== 0 ? -h : 0];
         } else {
-            // sqrt(x+h) = -v → x+h = v² → x = v² - h
             props.zeros = [formatNumber(Math.pow(-v, 2) - h)];
         }
     } else if (type === 'exp') {
-        props.zeros = []; // exp всегда > 0
+        props.zeros = [];
     } else if (type === 'log') {
-        // log(x+h) + v = 0 → log(x+h) = -v → x+h = e^(-v) → x = e^(-v) - h
         if (v === 0 && h === 0) {
             props.zeros = [1];
         } else {
@@ -338,7 +343,6 @@ function applyShiftToProperties(baseProps, shift, type) {
             props.zeros = [formatNumber(zero)];
         }
     } else if (type === 'sin') {
-        // sin(x+h) + v = 0 → sin(x+h) = -v
         if (Math.abs(v) > 1) {
             props.zeros = [];
         } else {
@@ -346,7 +350,6 @@ function applyShiftToProperties(baseProps, shift, type) {
             props.zeros = [`${formatNumber(baseZero - h)} + 2πn`, `${formatNumber(Math.PI - baseZero - h)} + 2πn`];
         }
     } else if (type === 'cos') {
-        // cos(x+h) + v = 0 → cos(x+h) = -v
         if (Math.abs(v) > 1) {
             props.zeros = [];
         } else {
@@ -354,16 +357,14 @@ function applyShiftToProperties(baseProps, shift, type) {
             props.zeros = [`${formatNumber(baseZero - h)} + 2πn`, `${formatNumber(-baseZero - h)} + 2πn`];
         }
     } else if (type === 'tan') {
-        // tan(x+h) + v = 0 → tan(x+h) = -v → x+h = arctan(-v) + πn
         const baseZero = Math.atan(-v);
         props.zeros = [`${formatNumber(baseZero - h)} + πn`];
     } else if (type === 'cot') {
-        // cot(x+h) + v = 0 → cot(x+h) = -v → x+h = arccot(-v) + πn
         const baseZero = Math.atan(-1/v);
         props.zeros = [`${formatNumber(baseZero - h)} + πn`];
     }
     
-    // 🔹 4. Монотонность (интервалы сдвигаются по OX)
+    // 4. Монотонность
     if (type === 'sqrt' && h !== 0) {
         props.monotonicity = `Строго возрастает при x∈[${formatNumber(-h)}; +∞)`;
     } else if (type === 'log' && h !== 0) {
@@ -372,7 +373,27 @@ function applyShiftToProperties(baseProps, shift, type) {
         props.monotonicity = `Убывает при x∈(-∞; ${formatNumber(-h)}), возрастает при x∈(${formatNumber(-h)}; +∞)`;
     }
     
-    // 🔹 5. Экстремумы (значения сдвигаются по OY, точки по OX)
+    // 5. Знакопостоянство
+    if (type === 'sqrt' && v !== 0) {
+        if (v > 0) {
+            props.sign = `f(x)>0 при x∈[${formatNumber(-h)}; +∞)`;
+        } else {
+            const zero = Math.pow(-v, 2) - h;
+            props.sign = `f(x)<0 при x∈[${formatNumber(-h)}; ${formatNumber(zero)}); f(x)>0 при x∈(${formatNumber(zero)}; +∞)`;
+        }
+    } else if (type === 'exp' && v !== 0) {
+        if (v >= 0) {
+            props.sign = 'f(x)>0 при всех x';
+        } else {
+            const zero = Math.log(-v);
+            props.sign = `f(x)<0 при x∈(-∞; ${formatNumber(zero)}); f(x)>0 при x∈(${formatNumber(zero)}; +∞)`;
+        }
+    } else if (type === 'log' && (v !== 0 || h !== 0)) {
+        const zero = Math.exp(-v) - h;
+        props.sign = `f(x)<0 при x∈(${formatNumber(-h)}; ${formatNumber(zero)}); f(x)>0 при x∈(${formatNumber(zero)}; +∞)`;
+    }
+    
+    // 6. Экстремумы
     if (type === 'sqrt') {
         props.extremes = `min: ${formatNumber(v)} (при x=${formatNumber(-h)}), max: не имеет`;
     } else if (type === 'exp') {
@@ -383,7 +404,7 @@ function applyShiftToProperties(baseProps, shift, type) {
         props.extremes = `min: ${formatNumber(v)} (при x=${formatNumber(-h)}), max: не имеет`;
     }
     
-    // 🔹 6. Четность (обычно нарушается при сдвигах)
+    // 7. Четность
     if (v !== 0 || h !== 0) {
         if (type === 'cos' && v !== 0 && h === 0) {
             props.parity = { result: 'Чётная', desc: 'Симметрия относительно оси OY' };
@@ -392,19 +413,19 @@ function applyShiftToProperties(baseProps, shift, type) {
         }
     }
     
-    // 🔹 7. Непрерывность
+    // 8. Непрерывность
     if (type === 'sqrt' && h !== 0) {
         props.continuity = `Непрерывна на [${formatNumber(-h)}; +∞)`;
     } else if (type === 'log' && h !== 0) {
         props.continuity = `Непрерывна на (${formatNumber(-h)}; +∞)`;
     }
     
-    // 🔹 8. Асимптоты (вертикальные сдвигаются по OX, горизонтальные по OY)
+    // 9. Асимптоты
     if (type === 'exp' && v !== 0) {
         props.asymptotes = `Горизонтальная: y=${formatNumber(v)} (при x→-∞)`;
     } else if (type === 'log' && h !== 0) {
         props.asymptotes = `Вертикальная: x=${formatNumber(-h)}`;
-    } else if (type === 'inverse' && h !== 0) {
+    } else if (type === 'inverse' && (h !== 0 || v !== 0)) {
         props.asymptotes = `Вертикальная: x=${formatNumber(-h)}; Горизонтальная: y=${formatNumber(v)}`;
     } else if (type === 'tan' && h !== 0) {
         props.asymptotes = `Вертикальные: x=${formatNumber(Math.PI/2 - h)} + πn`;
@@ -416,7 +437,7 @@ function applyShiftToProperties(baseProps, shift, type) {
 }
 
 // ============================================================================
-// ФОРМАТИРОВАНИЕ (округление до десятых)
+// ФОРМАТИРОВАНИЕ
 // ============================================================================
 function formatNumber(num) {
     if (num === null || num === undefined) return '0';
@@ -436,6 +457,12 @@ function formatZeros(zeros, type) {
         if (Number.isInteger(num)) return String(num);
         return num.toFixed(1);
     }).join(', ');
+}
+
+function safeToFixed(value, decimals = 1) {
+    const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+    if (isNaN(num)) return String(value);
+    return num.toFixed(decimals);
 }
 
 // ============================================================================
@@ -458,14 +485,11 @@ function analyzeFunction() {
             const baseType = getFunctionType(expr);
             currentType = baseType;
             
-            // 🔍 Анализируем сдвиги
             const shift = analyzeShift(expr, baseType);
             
-            // 🔍 Тестовые точки с учётом сдвигов
             let isValid = false;
             let testPoints = [];
             const h = shift.horizontalShift;
-            const v = shift.verticalShift;
             
             if (baseType === 'log' || baseType === 'sqrt') {
                 testPoints = [Math.max(0.1, -h + 0.1), Math.max(0.1, -h + 1), Math.max(0.1, -h + 4)];
@@ -490,9 +514,10 @@ function analyzeFunction() {
             document.getElementById('currentFunction').textContent = `f(x) = ${expr}`;
             document.getElementById('graphStatus').textContent = 'Анализ...';
             
-            // 🔍 Применяем шаблоны сдвигов к свойствам
             const baseProps = BASE_PROPERTIES[baseType];
             const properties = baseProps ? applyShiftToProperties(baseProps, shift, baseType) : calculatePropertiesNumerically(func, expr, baseType);
+            properties.typeName = getFunctionTypeName(baseType, shift);
+            properties.type = baseType;
             updatePropertiesDisplay(properties);
             
             document.getElementById('graphStatus').textContent = 'Построение...';
@@ -508,26 +533,23 @@ function analyzeFunction() {
 }
 
 // ============================================================================
-// ЧИСЛЕННЫЙ РАСЧЁТ (для сложных функций без шаблона)
+// ЧИСЛЕННЫЙ РАСЧЁТ
 // ============================================================================
 function calculatePropertiesNumerically(func, expr, type) {
-    const props = {
+    return {
+        typeName: getFunctionTypeName(type, {verticalShift: 0, horizontalShift: 0}),
+        type: type,
         domain: getDomain(expr, type),
         range: calculateRangeNumerically(func, expr, type),
-        zeros: formatZeros(findZeros(func, expr, type), type),
+        zeros: findZeros(func, expr, type),
         monotonicity: calculateMonotonicityWithIntervals(func, expr, type),
+        sign: calculateSignIntervalsNumerically(func, expr, type),
         extremes: calculateExtremesNumerically(func, expr, type),
         parity: checkParity(func, type),
         continuity: getContinuityValue(expr, type),
         bounded: calculateBoundednessNumerically(func),
         asymptotes: findAsymptotesAdvanced(expr, func, type)
     };
-    return Object.entries(props).map(([key, value]) => ({
-        title: key,
-        value: value,
-        icon: '📊',
-        desc: ''
-    }));
 }
 
 // ============================================================================
@@ -537,70 +559,181 @@ function updatePropertiesDisplay(props) {
     const container = document.getElementById('propertiesOutput');
     if (!container) return;
     
-    const propertyOrder = [
-        { key: 'Тип функции', icon: '📊' },
-        { key: '1. Область определения', icon: '🌐' },
-        { key: '2. Область значений', icon: '📏' },
-        { key: '3. Нули функции', icon: '⚫' },
-        { key: '4. Монотонность', icon: '📈' },
-        { key: '5. Знакопостоянство', icon: '➕➖' },
-        { key: '6. Наиб. и наим. значения', icon: '🏆' },
-        { key: '7. Чётность', icon: '🔄' },
-        { key: '8. Непрерывность', icon: '〰️' },
-        { key: '9. Ограниченность', icon: '🔒' },
-        { key: '10. Асимптоты', icon: '↗️' },
-        { key: '11. Периодичность', icon: '⏱️' }
-    ];
+    const html = [];
     
-    // Формируем массив свойств в правильном порядке
-    const orderedProps = [];
-    
-    // Сначала тип функции
-    orderedProps.push({ title: 'Тип функции', value: props.typeName || 'Функция', icon: '📊', desc: 'Классификация' });
-    
-    // Затем основные свойства из props
-    const propMap = {};
-    if (props.domain) propMap['1. Область определения'] = { value: props.domain, desc: 'D(f)', icon: '🌐' };
-    if (props.range) propMap['2. Область значений'] = { value: props.range, desc: 'E(f)', icon: '📏' };
-    if (props.zeros !== undefined) propMap['3. Нули функции'] = { value: typeof props.zeros === 'string' ? props.zeros : formatZeros(props.zeros, props.type), desc: 'f(x) = 0', icon: '⚫' };
-    if (props.monotonicity) propMap['4. Монотонность'] = { value: props.monotonicity, desc: 'Промежутки возрастания/убывания', icon: '📈' };
-    if (props.sign) propMap['5. Знакопостоянство'] = { value: props.sign, desc: 'Где функция положительна/отрицательна', icon: '➕➖' };
-    if (props.extremes) propMap['6. Наиб. и наим. значения'] = { value: props.extremes, desc: 'Экстремумы функции', icon: '🏆' };
-    if (props.parity) propMap['7. Чётность'] = { value: props.parity.result, desc: props.parity.desc, icon: '🔄' };
-    if (props.continuity) propMap['8. Непрерывность'] = { value: props.continuity, desc: 'Точки разрыва', icon: '〰️' };
-    if (props.bounded) propMap['9. Ограниченность'] = { value: props.bounded, desc: 'Наличие границ', icon: '🔒' };
-    if (props.asymptotes) propMap['10. Асимптоты'] = { value: props.asymptotes, desc: 'Линии, к которым стремится график', icon: '↗️' };
-    if (props.period) propMap['11. Периодичность'] = { value: `Периодическая (T=${props.period})`, desc: 'Повторяется через промежуток', icon: '⏱️' };
-    
-    // Добавляем в порядке
-    propertyOrder.forEach(item => {
-        if (item.key === 'Тип функции') return; // Уже добавлен
-        if (propMap[item.key]) {
-            orderedProps.push({ title: item.key, value: propMap[item.key].value, icon: item.icon, desc: propMap[item.key].desc });
-        }
-    });
-    
-    container.innerHTML = orderedProps.map(p => `
+    // Тип функции
+    html.push(`
         <div class="property-item">
-            <div class="property-icon">${p.icon}</div>
+            <div class="property-icon">📊</div>
             <div class="property-content">
-                <div class="property-title">${p.title}</div>
-                <div class="property-value">${p.value}</div>
-                <div class="property-desc">${p.desc}</div>
+                <div class="property-title">Тип функции</div>
+                <div class="property-value">${props.typeName || 'Функция'}</div>
+                <div class="property-desc">Классификация</div>
             </div>
         </div>
-    `).join('');
+    `);
+    
+    // 1. Область определения
+    if (props.domain) {
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">🌐</div>
+                <div class="property-content">
+                    <div class="property-title">1. Область определения</div>
+                    <div class="property-value">${props.domain}</div>
+                    <div class="property-desc">D(f)</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // 2. Область значений
+    if (props.range) {
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">📏</div>
+                <div class="property-content">
+                    <div class="property-title">2. Область значений</div>
+                    <div class="property-value">${props.range}</div>
+                    <div class="property-desc">E(f)</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // 3. Нули функции
+    if (props.zeros !== undefined) {
+        const zerosText = typeof props.zeros === 'string' ? props.zeros : formatZeros(props.zeros, props.type);
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">⚫</div>
+                <div class="property-content">
+                    <div class="property-title">3. Нули функции</div>
+                    <div class="property-value">${zerosText}</div>
+                    <div class="property-desc">f(x) = 0</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // 4. Монотонность
+    if (props.monotonicity) {
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">📈</div>
+                <div class="property-content">
+                    <div class="property-title">4. Монотонность</div>
+                    <div class="property-value">${props.monotonicity}</div>
+                    <div class="property-desc">Промежутки возрастания/убывания</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // 5. Знакопостоянство
+    if (props.sign) {
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">➕➖</div>
+                <div class="property-content">
+                    <div class="property-title">5. Знакопостоянство</div>
+                    <div class="property-value">${props.sign}</div>
+                    <div class="property-desc">Где функция положительна/отрицательна</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // 6. Экстремумы
+    if (props.extremes) {
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">🏆</div>
+                <div class="property-content">
+                    <div class="property-title">6. Наиб. и наим. значения</div>
+                    <div class="property-value">${props.extremes}</div>
+                    <div class="property-desc">Экстремумы функции</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // 7. Четность
+    if (props.parity) {
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">🔄</div>
+                <div class="property-content">
+                    <div class="property-title">7. Чётность</div>
+                    <div class="property-value">${props.parity.result}</div>
+                    <div class="property-desc">${props.parity.desc}</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // 8. Непрерывность
+    if (props.continuity) {
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">〰️</div>
+                <div class="property-content">
+                    <div class="property-title">8. Непрерывность</div>
+                    <div class="property-value">${props.continuity}</div>
+                    <div class="property-desc">Точки разрыва</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // 9. Ограниченность
+    if (props.bounded) {
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">🔒</div>
+                <div class="property-content">
+                    <div class="property-title">9. Ограниченность</div>
+                    <div class="property-value">${props.bounded}</div>
+                    <div class="property-desc">Наличие границ</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // 10. Асимптоты
+    if (props.asymptotes) {
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">↗️</div>
+                <div class="property-content">
+                    <div class="property-title">10. Асимптоты</div>
+                    <div class="property-value">${props.asymptotes}</div>
+                    <div class="property-desc">Линии, к которым стремится график</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // 11. Периодичность
+    if (props.period && ['sin', 'cos', 'tan', 'cot'].includes(props.type)) {
+        html.push(`
+            <div class="property-item">
+                <div class="property-icon">⏱️</div>
+                <div class="property-content">
+                    <div class="property-title">11. Периодичность</div>
+                    <div class="property-value">Периодическая (T=${props.period})</div>
+                    <div class="property-desc">Повторяется через промежуток</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    container.innerHTML = html.join('');
 }
 
 // ============================================================================
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================================
-function safeToFixed(value, decimals = 1) {
-    const num = typeof value === 'string' ? parseFloat(value) : Number(value);
-    if (isNaN(num)) return String(value);
-    return num.toFixed(decimals);
-}
-
 function getDomain(expr, type) {
     if (type === 'log') return '(0; +∞)';
     if (type === 'sqrt') return '[0; +∞)';
@@ -740,8 +873,32 @@ function findAsymptotesAdvanced(expr, func, type) {
     return 'Нет';
 }
 
+function calculateSignIntervalsNumerically(func, expr) {
+    const zeros = findZeros(func, expr, 'unknown');
+    if (!zeros || zeros.length === 0) {
+        const test = func.evaluate(0);
+        if (test !== null) return test > 0 ? 'f(x)>0 при x∈(-∞; +∞)' : 'f(x)<0 при x∈(-∞; +∞)';
+        return 'Не определено';
+    }
+    let pos = [], neg = [];
+    let points = [-10, ...zeros.map(z => typeof z === 'string' ? 0 : Number(z)).filter(n => !isNaN(n)), 10];
+    for (let i = 0; i < points.length - 1; i++) {
+        let mid = (points[i] + points[i+1]) / 2;
+        const val = func.evaluate(mid);
+        if (val !== null) {
+            const interval = `(${safeToFixed(points[i], 1)}; ${safeToFixed(points[i+1], 1)})`;
+            if (val > 0) pos.push(interval);
+            else neg.push(interval);
+        }
+    }
+    let res = '';
+    if (pos.length > 0) res += `f(x)>0 при x∈${pos.join(' ∪ ')}. `;
+    if (neg.length > 0) res += `f(x)<0 при x∈${neg.join(' ∪ ')}`;
+    return res.length > 70 ? res.substring(0, 65) + '...' : res;
+}
+
 // ============================================================================
-// ПОСТРОЕНИЕ ГРАФИКА
+// ПОСТРОЕНИЕ ГРАФИКА (ИСПРАВЛЕНО для экспоненты)
 // ============================================================================
 function plotFunction(func, expr, type, shift) {
     const range = parseInt(document.getElementById('xRange').value);
@@ -791,11 +948,16 @@ function plotFunction(func, expr, type, shift) {
     
     const trace = { x: xVals, y: yVals, mode: 'lines', line: { color: '#2c3e50', width: 3 } };
     
+    // 🔧 ИСПРАВЛЕНИЕ: Для экспоненты показываем ось X как асимптоту
     let yRange = null;
-    if (isTan || isCot || isInverse) yRange = [-10, 10];
-    if (isExp) {
-        const maxY = Math.max(...yVals.filter(v => v !== null && isFinite(v)));
-        yRange = [-1, Math.min(maxY * 1.2, 20)];
+    if (isTan || isCot || isInverse) {
+        yRange = [-10, 10];
+    } else if (isExp) {
+        // 🔧 Для экспоненты: Y от -2 до максимума, чтобы ось X была видна
+        const validY = yVals.filter(y => y !== null && isFinite(y));
+        const maxY = validY.length > 0 ? Math.max(...validY) : 10;
+        const minY = v > 0 ? v - 1 : -2;
+        yRange = [minY, Math.min(maxY * 1.2, 20)];
     }
 
     const layout = {
@@ -846,7 +1008,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const rangeVal = document.getElementById('rangeValue');
     if (slider && rangeVal) {
         slider.addEventListener('input', () => rangeVal.textContent = slider.value);
-        slider.addEventListener('change', () => { if(currentFunction) {
+        slider.addEventListener('change', () => { 
+            if(currentFunction) {
                 const shift = analyzeShift(currentExpression, currentType);
                 plotFunction(currentFunction, currentExpression, currentType, shift);
             }
