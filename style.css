@@ -17,58 +17,68 @@ body {
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
-    padding: 20px;
+    padding: 15px; /* 🔧 Было 20px */
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1000px; /* 🔧 Было 1200px */
     margin: 0 auto;
     background: var(--card-bg);
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    padding: 30px;
+    padding: 20px; /* 🔧 Было 30px */
     overflow-x: hidden;
 }
 
 /* ========================================================================
-   2. ШАПКА И ВВОД
+   2. ШАПКА КОМПАКТНЕЕ
    ======================================================================== */
 header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 20px; /* 🔧 Было 30px */
     border-bottom: 2px solid var(--border);
-    padding-bottom: 20px;
+    padding-bottom: 15px; /* 🔧 Было 20px */
 }
 
-h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
-.subtitle { color: #7f8c8d; font-size: 1.1rem; }
+h1 { 
+    color: var(--primary); 
+    font-size: 1.8rem; /* 🔧 Было 2.2rem */
+    margin-bottom: 8px; 
+}
 
-.input-section { margin-bottom: 30px; }
+.subtitle { 
+    color: #7f8c8d; 
+    font-size: 1rem; /* 🔧 Было 1.1rem */
+}
+
+.input-section { 
+    margin-bottom: 20px; /* 🔧 Было 30px */
+}
 
 .input-card {
     background: #ecf0f1;
-    padding: 25px;
+    padding: 15px; /* 🔧 Было 25px */
     border-radius: 8px;
     border-left: 5px solid var(--accent);
 }
 
 .input-area {
     display: flex;
-    gap: 15px;
-    margin-top: 15px;
+    gap: 10px; /* 🔧 Было 15px */
+    margin-top: 10px; /* 🔧 Было 15px */
 }
 
 #functionInput {
     flex: 1;
-    padding: 12px 15px;
-    font-size: 16px;
+    padding: 10px 12px; /* 🔧 Было 12px 15px */
+    font-size: 15px; /* 🔧 Было 16px */
     border: 1px solid #ccc;
     border-radius: 6px;
     font-family: 'Courier New', monospace;
 }
 
 .primary-btn {
-    padding: 12px 25px;
+    padding: 10px 20px; /* 🔧 Было 12px 25px */
     background: var(--accent);
     color: white;
     border: none;
@@ -76,15 +86,16 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
     font-weight: bold;
     cursor: pointer;
     transition: background 0.2s;
+    font-size: 14px;
 }
 .primary-btn:hover { background: #2980b9; }
 
 .hint-box {
-    margin-top: 15px;
-    font-size: 0.9rem;
+    margin-top: 12px; /* 🔧 Было 15px */
+    font-size: 0.85rem; /* 🔧 Было 0.9rem */
     color: #555;
     background: rgba(255,255,255,0.5);
-    padding: 10px;
+    padding: 8px; /* 🔧 Было 10px */
     border-radius: 4px;
 }
 
@@ -96,26 +107,35 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
     color: #c0392b;
 }
 
-.quick-examples { margin-top: 15px; }
-.example-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.quick-examples { 
+    margin-top: 12px; /* 🔧 Было 15px */
+}
+
+.example-buttons { 
+    display: flex; 
+    gap: 6px; /* 🔧 Было 8px */
+    flex-wrap: wrap; 
+    margin-top: 6px; /* 🔧 Было 8px */
+}
+
 .example-btn {
-    padding: 6px 12px;
+    padding: 5px 10px; /* 🔧 Было 6px 12px */
     background: white;
     border: 1px solid var(--accent);
     color: var(--accent);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.85rem; /* 🔧 Было 0.9rem */
 }
 .example-btn:hover { background: var(--accent); color: white; }
 
 /* ========================================================================
-   3. ОСНОВНАЯ СЕТКА (GRID)
+   3. ОСНОВНАЯ СЕТКА - БОЛЕЕ КОМПАКТНАЯ
    ======================================================================== */
 .main-content {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); 
-    gap: 30px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); /* 🔧 Было 1.5fr */
+    gap: 20px; /* 🔧 Было 30px */
     width: 100%;
     max-width: 100%;
 }
@@ -125,13 +145,13 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 }
 
 /* ========================================================================
-   4. КАРТОЧКИ
+   4. КАРТОЧКИ - МЕНЬШЕ ОТСТУПОВ
    ======================================================================== */
 .properties-card, .graph-card {
     background: white;
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 20px;
+    padding: 15px; /* 🔧 Было 20px */
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     width: 100%;
     max-width: 100%;
@@ -143,83 +163,74 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px; /* 🔧 Было 20px */
     border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+    padding-bottom: 8px; /* 🔧 Было 10px */
     flex-wrap: wrap;
     gap: 10px;
 }
 
-.card-header h3 { color: var(--primary); margin-right: 10px; }
+.card-header h3 { 
+    color: var(--primary); 
+    margin-right: 10px;
+    font-size: 1.1rem;
+}
 
 .function-display {
     font-family: monospace;
     background: #f8f9fa;
-    padding: 5px 10px;
+    padding: 4px 8px; /* 🔧 Было 5px 10px */
     border-radius: 4px;
     color: #d35400;
     font-weight: bold;
     white-space: nowrap;
+    font-size: 0.9rem;
 }
 
 /* ========================================================================
-   5. 🔥 ЯДЕРНЫЙ ФИКС: Свойства как простые блоки (без flex!)
+   5. СВОЙСТВА - КОМПАКТНЕЕ (ЯДЕРНЫЙ ФИКС)
    ======================================================================== */
+.properties-card { display: block !important; }
+#propertiesOutput { display: block !important; width: 100% !important; }
 
-/* Отключаем flex у контейнера свойств */
-.properties-card {
-    display: block !important;
-}
-
-#propertiesOutput {
-    display: block !important;
-    width: 100% !important;
-}
-
-/* Каждый свойство — обычный блок, друг под другом */
 .property-item {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
-    padding: 12px 0;
+    padding: 8px 0; /* 🔧 Было 12px 0 */
     border-bottom: 1px solid #f0f0f0;
     margin: 0;
     box-sizing: border-box;
     overflow-wrap: break-word !important;
     word-break: break-word !important;
 }
+.property-item:last-child { border-bottom: none !important; }
 
-.property-item:last-child {
-    border-bottom: none !important;
-}
-
-/* Иконка и контент — тоже блоки */
-.property-icon,
-.property-content {
+.property-icon, .property-content {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
 }
 
 .property-icon {
-    font-size: 1.5rem;
+    font-size: 1.3rem; /* 🔧 Было 1.5rem */
     text-align: left;
-    margin-bottom: 5px;
+    margin-bottom: 3px; /* 🔧 Было 5px */
 }
 
 .property-title {
     font-weight: bold;
     color: #555;
-    font-size: 0.9rem;
-    margin-bottom: 4px;
+    font-size: 0.85rem; /* 🔧 Было 0.9rem */
+    margin-bottom: 3px; /* 🔧 Было 4px */
     display: block;
 }
 
 .property-value {
     color: var(--primary);
     font-weight: bold;
-    font-size: 1.05rem;
-    margin: 4px 0;
+    font-size: 0.95rem; /* 🔧 Было 1.05rem */
+    margin: 3px 0; /* 🔧 Было 4px 0 */
     display: block;
     white-space: normal !important;
     word-break: break-word !important;
@@ -227,14 +238,14 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 }
 
 .property-desc {
-    font-size: 0.85rem;
+    font-size: 0.8rem; /* 🔧 Было 0.85rem */
     color: #888;
     display: block;
-    margin-top: 4px;
+    margin-top: 3px; /* 🔧 Было 4px */
 }
 
 /* ========================================================================
-   6. ГРАФИК И УПРАВЛЕНИЕ
+   6. ГРАФИК - КОМПАКТНЕЕ
    ======================================================================== */
 .graph-card {
     width: 100% !important;
@@ -243,7 +254,7 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 }
 
 .plot-container { 
-    height: 400px; 
+    height: 350px; /* 🔧 Было 400px */
     width: 100% !important;
     max-width: 100% !important;
     position: relative; 
@@ -252,34 +263,44 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 }
 
 .graph-controls {
-    margin-top: 15px;
+    margin-top: 12px; /* 🔧 Было 15px */
     display: flex;
     justify-content: space-between;
     align-items: center;
     background: #f8f9fa;
-    padding: 10px;
+    padding: 8px; /* 🔧 Было 10px */
     border-radius: 6px;
 }
 
-.control-group { display: flex; align-items: center; gap: 10px; }
-.range-slider { width: 150px; }
+.control-group { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; /* 🔧 Было 10px */
+    font-size: 0.9rem;
+}
+
+.range-slider { 
+    width: 120px; /* 🔧 Было 150px */
+}
+
 .control-buttons { display: flex; gap: 5px; }
 
 .control-btn {
-    padding: 5px 10px;
+    padding: 4px 8px; /* 🔧 Было 5px 10px */
     background: white;
     border: 1px solid #ccc;
     border-radius: 4px;
     cursor: pointer;
+    font-size: 12px;
 }
 .control-btn:hover { background: #eee; }
 
 /* ========================================================================
-   7. СОСТОЯНИЯ (Загрузка, Ошибка)
+   7. СОСТОЯНИЯ
    ======================================================================== */
 .empty-state, .loading-state, .error-state {
     text-align: center;
-    padding: 40px 20px;
+    padding: 30px 15px; /* 🔧 Чуть компактнее */
     color: #777;
 }
 
@@ -287,8 +308,8 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
     border: 4px solid #f3f3f3;
     border-top: 4px solid var(--accent);
     border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     animation: spin 1s linear infinite;
     margin: 0 auto 10px;
 }
@@ -296,18 +317,18 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
 .error-state { color: #c0392b; background: #fadbd8; border-radius: 6px; }
-.error-icon { font-size: 2rem; margin-bottom: 5px; display: block; }
+.error-icon { font-size: 1.8rem; margin-bottom: 5px; display: block; }
 
 /* ========================================================================
    8. ПОДВАЛ
    ======================================================================== */
 footer {
-    margin-top: 40px;
+    margin-top: 25px; /* 🔧 Было 40px */
     text-align: center;
-    font-size: 0.9rem;
+    font-size: 0.85rem; /* 🔧 Было 0.9rem */
     color: #95a5a6;
     border-top: 1px solid #eee;
-    padding-top: 20px;
+    padding-top: 15px; /* 🔧 Было 20px */
 }
 
 /* ========================================================================
@@ -315,18 +336,22 @@ footer {
    ======================================================================== */
 @media (max-width: 768px) {
     body { padding: 10px; }
-    .container { padding: 15px; }
-    h1 { font-size: 1.6rem; }
+    .container { padding: 12px; }
+    h1 { font-size: 1.5rem; }
     
     .input-area { flex-direction: column; }
-    #functionInput { width: 100%; margin-bottom: 10px; }
+    #functionInput { width: 100%; margin-bottom: 8px; }
     .primary-btn { width: 100%; }
     
-    .main-content { gap: 20px; }
-    .properties-card, .graph-card { padding: 15px; }
-    .plot-container { height: 300px; }
+    .main-content { 
+        grid-template-columns: 1fr !important;
+        gap: 15px; 
+    }
     
-    .graph-controls { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .properties-card, .graph-card { padding: 12px; }
+    .plot-container { height: 280px; } /* 🔧 Компактнее на мобильных */
+    
+    .graph-controls { flex-direction: column; align-items: flex-start; gap: 8px; }
     .range-slider { flex: 1; }
     .control-buttons { width: 100%; justify-content: space-between; }
     .control-btn { flex: 1; }
@@ -334,12 +359,16 @@ footer {
     .card-header { flex-direction: column; align-items: flex-start; }
 }
 
-/* ========================================================================
-   10. 🚨 АВАРИЙНЫЙ БЛОК: если что-то всё равно вылезает
-   ======================================================================== */
-* {
-    max-width: 100vw !important;
+@media (max-width: 480px) {
+    .property-item { padding: 6px 0; }
+    .property-icon { font-size: 1.2rem; }
+    .property-value { font-size: 0.9rem; }
 }
+
+/* ========================================================================
+   10. 🚨 АВАРИЙНЫЙ БЛОК
+   ======================================================================== */
+* { max-width: 100vw !important; }
 
 body, .container, .main-content, 
 .properties-card, .graph-card, 
@@ -348,13 +377,11 @@ body, .container, .main-content,
     overflow-x: hidden !important;
 }
 
-/* Запрещаем любым элементам внутри свойств растягивать страницу */
 #propertiesOutput * {
     max-width: 100% !important;
     box-sizing: border-box !important;
 }
 
-/* Plotly иногда создаёт абсолютно позиционированные элементы */
 #plot svg, #plot .plotly-graph-div {
     max-width: 100% !important;
     overflow: hidden !important;
