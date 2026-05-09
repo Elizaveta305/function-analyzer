@@ -1,6 +1,6 @@
 // ============================================
 // АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 9.5)
-// Исправлено: убран оверлей «Построение...»
+// Исправлено: все свойства отображаются вертикально
 // ============================================
 
 let currentFunction = null;
@@ -149,16 +149,16 @@ function getFunctionTypeName(type, shift) {
 // 6. БАЗОВЫЕ СВОЙСТВА
 // ============================================================================
 const BASE_PROPERTIES = {
-    'linear': { domain: '(-∞; +∞)', range: '(-∞; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈(-∞; +∞)', sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)', extremes: 'Не имеет (±∞)', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Не ограничена', asymptotes: 'Нет' },
+    'linear': { domain: '(-∞; +)', range: '(-∞; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈(-∞; +∞)', sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)', extremes: 'Не имеет (±∞)', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Не ограничена', asymptotes: 'Нет' },
     'quadratic': { domain: '(-∞; +∞)', range: '[0; +∞)', zeros: [0], monotonicity: 'Убывает при x∈(-∞; 0), возрастает при x∈(0; +∞)', sign: 'f(x)>0 при x≠0', extremes: 'min: 0 (при x=0)', parity: { result: 'Чётная', desc: 'Симметрия относительно OY' }, continuity: 'Непрерывна', bounded: 'Ограничена снизу', asymptotes: 'Нет' },
     'cubic': { domain: '(-∞; +∞)', range: '(-∞; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈(-∞; +∞)', sign: 'f(x)>0 при x>0; f(x)<0 при x<0', extremes: 'Не имеет (±∞)', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Не ограничена', asymptotes: 'Нет' },
     'inverse': { domain: '(-∞; 0) ∪ (0; +∞)', range: '(-∞; 0) ∪ (0; +∞)', zeros: [], monotonicity: 'Убывает на (-∞; 0) и (0; +∞)', sign: 'f(x)>0 при x>0; f(x)<0 при x<0', extremes: 'Не имеет', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Разрыв при x=0', bounded: 'Не ограничена', asymptotes: 'Вертик: x=0; Гориз: y=0' },
     'sqrt': { domain: '[0; +∞)', range: '[0; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈[0; +∞)', sign: 'f(x)≥0', extremes: 'min: 0', parity: { result: 'Общего вида', desc: 'D(f) не симметрична' }, continuity: 'Непрерывна на [0; +∞)', bounded: 'Ограничена снизу', asymptotes: 'Нет' },
     'abs': { domain: '(-∞; +∞)', range: '[0; +∞)', zeros: [0], monotonicity: 'Убывает при x∈(-∞; 0), возрастает при x∈(0; +∞)', sign: 'f(x)≥0', extremes: 'min: 0 (при x=0)', parity: { result: 'Чётная', desc: 'Симметрия относительно OY' }, continuity: 'Непрерывна', bounded: 'Ограничена снизу', asymptotes: 'Нет' },
     'exp': { domain: '(-∞; +∞)', range: '(0; +∞)', zeros: [], monotonicity: 'Возрастает на ℝ', sign: 'f(x)>0 всегда', extremes: 'Не имеет', parity: { result: 'Общего вида', desc: 'Нет симметрии' }, continuity: 'Непрерывна', bounded: 'Ограничена снизу', asymptotes: 'Гориз: y=0 (x→-∞)' },
-    'log': { domain: '(0; +∞)', range: '(-∞; +∞)', zeros: [1], monotonicity: 'Возрастает на (0; +∞)', sign: 'f(x)>0 при x>1; f(x)<0 при 0<x<1', extremes: 'Не имеет', parity: { result: 'Общего вида', desc: 'D(f) не симметрична' }, continuity: 'Непрерывна на (0; +∞)', bounded: 'Не ограничена', asymptotes: 'Вертик: x=0' },
+    'log': { domain: '(0; +∞)', range: '(-∞; +)', zeros: [1], monotonicity: 'Возрастает на (0; +∞)', sign: 'f(x)>0 при x>1; f(x)<0 при 0<x<1', extremes: 'Не имеет', parity: { result: 'Общего вида', desc: 'D(f) не симметрична' }, continuity: 'Непрерывна на (0; +∞)', bounded: 'Не ограничена', asymptotes: 'Вертик: x=0' },
     'sin': { domain: '(-∞; +∞)', range: '[-1; 1]', zeros: ['0', 'π', '-π', '2π', '-2π'], monotonicity: 'Не монотонна (периодическая)', sign: 'Периодически меняется', extremes: 'min: -1, max: 1', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Ограничена', asymptotes: 'Нет', period: '2π' },
-    'cos': { domain: '(-∞; +∞)', range: '[-1; 1]', zeros: ['π/2', '-π/2', '3π/2', '-3π/2'], monotonicity: 'Не монотонна (периодическая)', sign: 'Периодически меняется', extremes: 'min: -1, max: 1', parity: { result: 'Чётная', desc: 'Симметрия относительно OY' }, continuity: 'Непрерывна', bounded: 'Ограничена', asymptotes: 'Нет', period: '2π' },
+    'cos': { domain: '(-∞; +)', range: '[-1; 1]', zeros: ['π/2', '-π/2', '3π/2', '-3π/2'], monotonicity: 'Не монотонна (периодическая)', sign: 'Периодически меняется', extremes: 'min: -1, max: 1', parity: { result: 'Чётная', desc: 'Симметрия относительно OY' }, continuity: 'Непрерывна', bounded: 'Ограничена', asymptotes: 'Нет', period: '2π' },
     'tan': { domain: 'Все x, кроме π/2+πn', range: '(-∞; +∞)', zeros: ['0', 'π', '-π', '2π', '-2π'], monotonicity: 'Возрастает на промежутках', sign: 'Периодически меняется', extremes: 'Не имеет', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Разрывна при π/2+πn', bounded: 'Не ограничена', asymptotes: 'Вертик: x=π/2+πn', period: 'π' },
     'cot': { domain: 'Все x, кроме πn', range: '(-∞; +∞)', zeros: ['π/2', '-π/2', '3π/2', '-3π/2'], monotonicity: 'Убывает на промежутках', sign: 'Периодически меняется', extremes: 'Не имеет', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Разрывна при πn', bounded: 'Не ограничена', asymptotes: 'Вертик: x=πn', period: 'π' }
 };
@@ -238,7 +238,6 @@ function applyShiftToProperties(baseProps, shift, type) {
         } else if (v === 0) {
             props.sign = 'f(x)≥0, f(x)=0 при одном x';
         } else {
-            // |x+h| + v = 0 → |x+h| = -v → x = -h ± |v|
             const z1 = formatNumber(-h + v);
             const z2 = formatNumber(-h - v);
             props.sign = `f(x)<0 при x∈(${z1}; ${z2}); f(x)≥0 вне этого интервала`;
@@ -300,7 +299,6 @@ function analyzeFunction() {
     if (!validateInput(expr)) { showError('Недопустимые символы'); return; }
     
     showLoading();
-    // 🔧 Убрано: document.getElementById('plot-loading').hidden = false;
     
     setTimeout(() => {
         try {
@@ -395,16 +393,27 @@ function findZerosImproved(func, expr, type) {
 }
 
 // ============================================================================
-// 11. ИНТЕРФЕЙС
+// 11. ИНТЕРФЕЙС (ВСЕ СВОЙСТВА ВЕРТИКАЛЬНО)
 // ============================================================================
 function updatePropertiesDisplay(props) {
     const container = document.getElementById('propertiesOutput');
     if (!container) return;
     
-    const html = [
-        `<div class="property-item"><div class="property-icon">📊</div><div class="property-content"><div class="property-title">Тип функции</div><div class="property-value">${props.typeName || 'Функция'}</div><div class="property-desc">Классификация</div></div></div>`
-    ];
+    const html = [];
     
+    // Тип функции
+    html.push(`
+        <div class="property-item">
+            <div class="property-icon">📊</div>
+            <div class="property-content">
+                <div class="property-title">Тип функции</div>
+                <div class="property-value">${props.typeName || 'Функция'}</div>
+                <div class="property-desc">Классификация</div>
+            </div>
+        </div>
+    `);
+    
+    // ВСЕ свойства 1-10 рендерим ВЕРТИКАЛЬНО (не grid!)
     const items = [
         { k: 'domain', t: '1. Область определения', d: 'D(f)', i: '🌐' },
         { k: 'range', t: '2. Область значений', d: 'E(f)', i: '📏' },
@@ -418,15 +427,26 @@ function updatePropertiesDisplay(props) {
         { k: 'asymptotes', t: '10. Асимптоты', d: 'Линии притяжения', i: '↗️' }
     ];
     
+    // Добавляем периодичность если есть
     if (['sin', 'cos', 'tan', 'cot'].includes(props.type) && props.period) {
         items.push({ k: 'period', t: '11. Периодичность', d: 'Повторяется', i: '⏱️', f: () => `Периодическая (T=${props.period})` });
     }
     
+    // Рендерим ВСЕ свойства вертикально
     items.forEach(item => {
         const val = item.k === 'parity' ? props[item.k] : props[item.k];
         const desc = item.k === 'parity' ? (props[item.k]?.desc || '') : item.d;
         if (val !== undefined && val !== null) {
-            html.push(`<div class="property-item"><div class="property-icon">${item.i}</div><div class="property-content"><div class="property-title">${item.t}</div><div class="property-value">${item.f ? item.f(val) : val}</div><div class="property-desc">${typeof desc === 'function' ? desc(props[item.k]) : desc}</div></div></div>`);
+            html.push(`
+                <div class="property-item">
+                    <div class="property-icon">${item.i}</div>
+                    <div class="property-content">
+                        <div class="property-title">${item.t}</div>
+                        <div class="property-value">${item.f ? item.f(val) : val}</div>
+                        <div class="property-desc">${typeof desc === 'function' ? desc(props[item.k]) : desc}</div>
+                    </div>
+                </div>
+            `);
         }
     });
     
@@ -469,7 +489,7 @@ function getContinuityValue(expr, type) {
 function calculateRangeNumerically(func, expr, type) {
     if (['sin', 'cos'].includes(type)) return '[-1; 1]';
     if (type === 'exp') return '(0; +∞)';
-    if (type === 'log') return '(-∞; +∞)';
+    if (type === 'log') return '(-∞; +)';
     if (type === 'sqrt' || type === 'abs') return '[0; +∞)';
     if (type === 'inverse') return '(-∞; 0) ∪ (0; +∞)';
     
@@ -614,7 +634,6 @@ function plotFunction(func, expr, type, shift) {
     
     if (typeof Plotly !== 'undefined') {
         Plotly.react('plot', [trace], layout, {displayModeBar: false});
-        // 🔧 Убрано: .then(() => { document.getElementById('plot-loading').hidden = true; })
     } else {
         document.getElementById('plot').innerHTML = '<div class="error-state">График не загружен. Проверьте интернет.</div>';
     }
@@ -696,5 +715,4 @@ function initializePlot() {
         xaxis: {title: 'X', zeroline: true}, yaxis: {title: 'Y', zeroline: true},
         margin: {t:30, r:20, b:40, l:40}
     }, {displayModeBar: false});
-    // 🔧 Убрано: document.getElementById('plot-loading').hidden = true;
 }
