@@ -1,5 +1,5 @@
 /* ========================================================================
-   ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И СБРОС
+   1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И СБРОС
    ======================================================================== */
 :root {
     --primary: #2c3e50;
@@ -27,10 +27,12 @@ body {
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.08);
     padding: 30px;
+    /* Защита от горизонтального скролла на всем контейнере */
+    overflow-x: hidden; 
 }
 
 /* ========================================================================
-   ШАПКА И ВВОД
+   2. ШАПКА И ВВОД
    ======================================================================== */
 header {
     text-align: center;
@@ -109,24 +111,25 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 .example-btn:hover { background: var(--accent); color: white; }
 
 /* ========================================================================
-   ОСНОВНАЯ СЕТКА (GRID)
+   3. ОСНОВНАЯ СЕТКА (GRID) С ЗАЩИТОЙ ОТ ВЫЛЕЗАНИЯ
    ======================================================================== */
 .main-content {
     display: grid;
-    /* Левая колонка (свойства) : Правая колонка (график) */
     grid-template-columns: 1fr 1.5fr; 
     gap: 30px;
+    max-width: 100%;
+    overflow-x: hidden; /* КРИТИЧНО: запрещаем скролл по ширине */
 }
 
-/* Адаптив для планшетов и телефонов */
+/* Для планшетов и мобильных */
 @media (max-width: 900px) { 
     .main-content { 
-        grid-template-columns: 1fr !important; /* Всегда в одну колонку */
+        grid-template-columns: 1fr !important; 
     } 
 }
 
 /* ========================================================================
-   КАРТОЧКИ (Свойства и График)
+   4. КАРТОЧКИ (Общие стили)
    ======================================================================== */
 .properties-card, .graph-card {
     background: white;
@@ -134,8 +137,10 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    /* Гарантируем, что карточки занимают отведенное место */
     width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    min-width: 0; /* Фикс для Flex/Grid детей */
 }
 
 .card-header {
@@ -162,7 +167,7 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 }
 
 /* ========================================================================
-   🔧 ФИКС СПИСКА СВОЙСТВ (ВЕРТИКАЛЬНЫЙ МАКЕТ)
+   5. 🔧 ИСПРАВЛЕННЫЙ ФИКС СПИСКА СВОЙСТВ (ВЕРТИКАЛЬНЫЙ)
    ======================================================================== */
 
 /* Контейнер свойств - всегда флекс-колонка */
@@ -174,15 +179,25 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 #propertiesOutput {
     display: flex !important;
     flex-direction: column !important;
-    width: 100%;
+    width: 100% !important;
+    overflow-x: hidden !important;
 }
 
 /* Каждый элемент свойства */
 .property-item {
     display: flex !important;
     flex-direction: row !important; /* Иконка слева, текст справа */
-    align-items: flex-start !important; /* Выравнивание по верху для длинного текста */
+    align-items: flex-start !important;
     width: 100% !important;
+    
+    /* КРИТИЧЕСКИ ВАЖНО: предотвращаем выход за границы */
+    max-width: 100% !important;
+    min-width: 0 !important; /* Позволяет сжиматься */
+    flex-shrink: 1 !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    hyphens: auto !important;
+    
     gap: 15px;
     padding: 12px;
     border-bottom: 1px solid #f0f0f0;
@@ -194,40 +209,58 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
     border-bottom: none !important;
 }
 
+/* Иконка */
 .property-icon { 
     font-size: 1.5rem; 
-    min-width: 30px; 
-    text-align: center; 
+    min-width: 30px !important;
+    max-width: 30px !important;
+    text-align: center;
+    flex-shrink: 0 !important; /* Иконка не сжимается */
+}
+
+/* Обертка для контента (Title + Value + Desc) */
+.property-content {
+    flex: 1 !important; /* Занимает все оставшееся место */
+    min-width: 0 !important;
+    overflow-wrap: break-word !important;
 }
 
 .property-title { 
     font-weight: bold; 
     color: #555; 
-    font-size: 0.9rem; 
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+    overflow-wrap: break-word;
 }
 
 .property-value { 
     color: var(--primary); 
     font-weight: bold; 
     font-size: 1.05rem; 
-    margin: 2px 0; 
-    /* Разрешаем перенос длинных значений */
-    word-break: break-word; 
+    margin: 2px 0;
+    
+    /* Разрешаем перенос и обрезаем длинные слова */
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
 }
 
 .property-desc { 
     font-size: 0.85rem; 
-    color: #888; 
+    color: #888;
+    overflow-wrap: break-word;
 }
 
 /* ========================================================================
-   ГРАФИК И УПРАВЛЕНИЕ
+   6. ГРАФИК И УПРАВЛЕНИЕ
    ======================================================================== */
 .plot-container { 
     height: 400px; 
-    width: 100%; 
+    width: 100% !important;
+    max-width: 100% !important;
     position: relative; 
     background: #fff;
+    overflow-x: hidden !important;
 }
 
 .graph-controls {
@@ -254,7 +287,7 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 .control-btn:hover { background: #eee; }
 
 /* ========================================================================
-   СОСТОЯНИЯ (Загрузка, Ошибка)
+   7. СОСТОЯНИЯ (Загрузка, Ошибка)
    ======================================================================== */
 .empty-state, .loading-state, .error-state {
     text-align: center;
@@ -278,7 +311,7 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 .error-icon { font-size: 2rem; margin-bottom: 5px; display: block; }
 
 /* ========================================================================
-   ПОДВАЛ (FOOTER)
+   8. ПОДВАЛ
    ======================================================================== */
 footer {
     margin-top: 40px;
@@ -290,7 +323,7 @@ footer {
 }
 
 /* ========================================================================
-   АДАПТИВНОСТЬ (МОБИЛЬНЫЕ УСТРОЙСТВА)
+   9. АДАПТИВНОСТЬ (МОБИЛЬНЫЕ УСТРОЙСТВА)
    ======================================================================== */
 @media (max-width: 768px) {
     body { padding: 10px; }
@@ -311,5 +344,16 @@ footer {
     .control-btn { flex: 1; }
     
     .card-header { flex-direction: column; align-items: flex-start; }
-    .property-item { gap: 10px; }
+    
+    /* На очень маленьких экранах свойства вертикально (иконка сверху) */
+    @media (max-width: 480px) {
+        .property-item {
+            flex-direction: column !important;
+            gap: 8px !important;
+        }
+        .property-icon {
+            min-width: auto !important;
+            max-width: none !important;
+        }
+    }
 }
