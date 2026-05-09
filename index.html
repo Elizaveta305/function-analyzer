@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Интерактивный анализатор математических функций: построение графиков, расчёт 11 свойств, поддержка сдвигов и тригонометрии.">
     <title>Анализатор функций | Проект ГУУ</title>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" defer></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,24 +21,24 @@
             <div class="input-card">
                 <h3>🔍 Ввод функции</h3>
                 <div class="input-area">
-                    <input type="text" id="functionInput" 
+                    <input type="text" id="functionInput" aria-label="Введите математическую функцию"
                            placeholder="Например: x^2 - 4 или exp(x)*sin(x)">
-                    <button id="calculateBtn" class="primary-btn">Анализировать</button>
+                    <button id="calculateBtn" class="primary-btn" aria-label="Анализировать функцию">Анализировать</button>
                 </div>
                 
                 <div class="hint-box">
                     <p><strong>📝 Синтаксис:</strong></p>
                     <ul>
-                        <li>Умножение: <code>2*x</code></li>
+                        <li>Умножение: <code>2*x</code> (не 2x)</li>
                         <li>Степень: <code>x^2</code> или <code>x**2</code></li>
-                        <li>Функции: <code>sin(x)</code>, <code>cos(x)</code>, <code>tan(x)</code>, <code>cot(x)</code>, <code>sqrt(x)</code></li>
+                        <li>Функции: <code>sin(x)</code>, <code>cos(x)</code>, <code>tan(x)</code>, <code>cot(x)</code>, <code>sqrt(x)</code>, <code>exp(x)</code>, <code>log(x)</code></li>
                         <li>Константы: <code>pi</code>, <code>e</code></li>
                     </ul>
                 </div>
                 
                 <div class="quick-examples">
                     <p><strong>⚡ Примеры:</strong></p>
-                    <div class="example-buttons">
+                    <div class="example-buttons" role="group" aria-label="Быстрые примеры функций">
                         <button class="example-btn" data-func="x">x</button>
                         <button class="example-btn" data-func="x**2">x²</button>
                         <button class="example-btn" data-func="x^3">x³</button>
@@ -58,35 +59,39 @@
             <div class="properties-card">
                 <div class="card-header">
                     <h3>📋 Свойства функции</h3>
-                    <div class="function-display" id="currentFunction">f(x) = ...</div>
+                    <div class="function-display" id="currentFunction" role="status" aria-live="polite">f(x) = ...</div>
                 </div>
-                
-                <div id="propertiesOutput">
+                <div id="propertiesOutput" role="region" aria-label="Результаты анализа">
                     <p style="text-align: center; color: #95a5a6; padding: 40px 20px; font-size: 1.1em;">
                         Введите функцию в поле выше и нажмите «Анализировать»,<br>чтобы увидеть её свойства и график.
                     </p>
                 </div>
-                
             </div>
 
             <div class="graph-card">
                 <div class="card-header">
                     <h3>📈 График</h3>
                     <div class="graph-stats">
-                        <span id="graphStatus">Ожидание...</span>
+                        <span id="graphStatus" role="status" aria-live="polite">Ожидание...</span>
                     </div>
                 </div>
-                <div id="plot" class="plot-container"></div>
+                <div id="plot" class="plot-container" role="img" aria-label="Интерактивный график функции">
+                    <div id="plot-loading" class="plot-loading" hidden>
+                        <div class="spinner"></div>
+                        <p>Построение...</p>
+                    </div>
+                </div>
                 <div class="graph-controls">
                     <div class="control-group">
-                        <label>Масштаб X:</label>
-                        <input type="range" id="xRange" min="1" max="20" value="10" class="range-slider">
+                        <label for="xRange">Масштаб X:</label>
+                        <input type="range" id="xRange" min="1" max="20" value="10" class="range-slider" aria-label="Масштаб оси X">
                         <span class="range-value">±<span id="rangeValue">10</span></span>
                     </div>
                     <div class="control-buttons">
-                        <button id="zoomInBtn" class="control-btn">➕</button>
-                        <button id="zoomOutBtn" class="control-btn">➖</button>
-                        <button id="resetViewBtn" class="control-btn">🔄</button>
+                        <button id="zoomInBtn" class="control-btn" aria-label="Увеличить масштаб">➕</button>
+                        <button id="zoomOutBtn" class="control-btn" aria-label="Уменьшить масштаб">➖</button>
+                        <button id="resetViewBtn" class="control-btn" aria-label="Сбросить вид">🔄</button>
+                        <button id="exportBtn" class="control-btn" aria-label="Скачать график">📥</button>
                     </div>
                 </div>
             </div>

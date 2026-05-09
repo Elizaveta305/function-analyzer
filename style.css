@@ -127,8 +127,10 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
     margin-bottom: 20px;
     border-bottom: 1px solid #eee;
     padding-bottom: 10px;
+    flex-wrap: wrap; /* Чтобы заголовок не ломался на узких экранах */
+    gap: 10px;
 }
-.card-header h3 { color: var(--primary); }
+.card-header h3 { color: var(--primary); margin-right: 10px; }
 .function-display {
     font-family: monospace;
     background: #f8f9fa;
@@ -136,6 +138,7 @@ h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
     border-radius: 4px;
     color: #d35400;
     font-weight: bold;
+    white-space: nowrap;
 }
 
 /* Список свойств */
@@ -200,4 +203,75 @@ footer {
     color: #95a5a6;
     border-top: 1px solid #eee;
     padding-top: 20px;
+}
+
+/* ==========================================================================
+   АДАПТИВНОСТЬ (Мобильные устройства)
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px; /* Меньше отступы у краев экрана */
+    }
+
+    .container {
+        padding: 15px; /* Меньше отступы внутри карточки */
+    }
+
+    h1 {
+        font-size: 1.6rem; /* Заголовок поменьше */
+    }
+
+    .input-area {
+        flex-direction: column; /* Поле ввода и кнопка друг под другом */
+    }
+
+    #functionInput {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .primary-btn {
+        width: 100%; /* Кнопка на всю ширину, удобно нажимать пальцем */
+    }
+
+    .main-content {
+        gap: 20px; /* Меньше расстояние между блоками */
+    }
+
+    .properties-card, .graph-card {
+        padding: 15px;
+    }
+
+    .plot-container {
+        height: 300px; /* График поменьше, чтобы влез в экран */
+    }
+
+    .graph-controls {
+        flex-direction: column; /* Управление графиком столбиком */
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .range-slider {
+        flex: 1; /* Ползунок масштаба занимает место */
+    }
+
+    .control-buttons {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .control-btn {
+        flex: 1; /* Кнопки зума одинаковой ширины */
+    }
+    
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .property-item {
+        gap: 10px;
+    }
 }
