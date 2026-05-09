@@ -1,6 +1,6 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 9.1)
-// Полная версия со всеми свойствами
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 9.2)
+// Исправлены графики тангенса и котангенса
 // ============================================
 
 let currentFunction = null;
@@ -152,7 +152,7 @@ function getFunctionTypeName(type, shift) {
 const BASE_PROPERTIES = {
     'linear': {
         domain: '(-∞; +∞)',
-        range: '(-∞; +∞)',
+        range: '(-∞; +)',
         zeros: [0],
         monotonicity: 'Возрастает при x∈(-∞; +∞)',
         sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
@@ -178,7 +178,7 @@ const BASE_PROPERTIES = {
         domain: '(-∞; +∞)',
         range: '(-∞; +∞)',
         zeros: [0],
-        monotonicity: 'Возрастает при x∈(-∞; +∞)',
+        monotonicity: 'Возрастает при x∈(-∞; +)',
         sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)',
         extremes: 'Не имеет (±∞)',
         parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' },
@@ -235,7 +235,7 @@ const BASE_PROPERTIES = {
         asymptotes: 'Вертикальная: x=0'
     },
     'sin': {
-        domain: '(-∞; +∞)',
+        domain: '(-∞; +)',
         range: '[-1; 1]',
         zeros: ['0', 'π', '-π', '2π', '-2π'],
         monotonicity: 'Не монотонна (периодическая)',
@@ -561,7 +561,6 @@ function updatePropertiesDisplay(props) {
     
     const html = [];
     
-    // Тип функции
     html.push(`
         <div class="property-item">
             <div class="property-icon">📊</div>
@@ -573,7 +572,6 @@ function updatePropertiesDisplay(props) {
         </div>
     `);
     
-    // 1. Область определения
     if (props.domain) {
         html.push(`
             <div class="property-item">
@@ -587,7 +585,6 @@ function updatePropertiesDisplay(props) {
         `);
     }
     
-    // 2. Область значений
     if (props.range) {
         html.push(`
             <div class="property-item">
@@ -601,7 +598,6 @@ function updatePropertiesDisplay(props) {
         `);
     }
     
-    // 3. Нули функции
     if (props.zeros !== undefined) {
         const zerosText = typeof props.zeros === 'string' ? props.zeros : formatZeros(props.zeros, props.type);
         html.push(`
@@ -616,7 +612,6 @@ function updatePropertiesDisplay(props) {
         `);
     }
     
-    // 4. Монотонность
     if (props.monotonicity) {
         html.push(`
             <div class="property-item">
@@ -630,7 +625,6 @@ function updatePropertiesDisplay(props) {
         `);
     }
     
-    // 5. Знакопостоянство
     if (props.sign) {
         html.push(`
             <div class="property-item">
@@ -644,7 +638,6 @@ function updatePropertiesDisplay(props) {
         `);
     }
     
-    // 6. Экстремумы
     if (props.extremes) {
         html.push(`
             <div class="property-item">
@@ -658,7 +651,6 @@ function updatePropertiesDisplay(props) {
         `);
     }
     
-    // 7. Четность
     if (props.parity) {
         html.push(`
             <div class="property-item">
@@ -672,7 +664,6 @@ function updatePropertiesDisplay(props) {
         `);
     }
     
-    // 8. Непрерывность
     if (props.continuity) {
         html.push(`
             <div class="property-item">
@@ -686,7 +677,6 @@ function updatePropertiesDisplay(props) {
         `);
     }
     
-    // 9. Ограниченность
     if (props.bounded) {
         html.push(`
             <div class="property-item">
@@ -700,7 +690,6 @@ function updatePropertiesDisplay(props) {
         `);
     }
     
-    // 10. Асимптоты
     if (props.asymptotes) {
         html.push(`
             <div class="property-item">
@@ -714,7 +703,6 @@ function updatePropertiesDisplay(props) {
         `);
     }
     
-    // 11. Периодичность
     if (props.period && ['sin', 'cos', 'tan', 'cot'].includes(props.type)) {
         html.push(`
             <div class="property-item">
@@ -898,11 +886,11 @@ function calculateSignIntervalsNumerically(func, expr) {
 }
 
 // ============================================================================
-// ПОСТРОЕНИЕ ГРАФИКА (ИСПРАВЛЕНО для экспоненты)
+// ПОСТРОЕНИЕ ГРАФИКА (ИСПРАВЛЕНО для тангенса и котангенса)
 // ============================================================================
 function plotFunction(func, expr, type, shift) {
     const range = parseInt(document.getElementById('xRange').value);
-    const step = range / 500;
+    const step = range / 800;  // 🔧 Увеличил количество точек
     const xVals = [], yVals = [];
     let startX = -range, endX = range;
     
@@ -921,20 +909,24 @@ function plotFunction(func, expr, type, shift) {
         let skip = false;
         let y = null;
 
+        // 🔧 Уменьшил зону пропуска с 0.15 до 0.05
         if (isTan) {
             let dist = Math.abs((x + h - Math.PI/2) % Math.PI);
             if (dist > Math.PI/2) dist = Math.PI - dist;
-            if (dist < 0.15) skip = true;
+            if (dist < 0.05) skip = true;
         } else if (isCot) {
             let dist = Math.abs((x + h) % Math.PI);
             if (dist > Math.PI/2) dist = Math.PI - dist;
-            if (dist < 0.15) skip = true;
+            if (dist < 0.05) skip = true;
         } else if (isInverse && Math.abs(x + h) < 0.05) {
             skip = true;
         }
 
         if (!skip) y = func.evaluate(x);
-        if (!isExp && y !== null && (Math.abs(y) > 100 || !isFinite(y))) y = null;
+        
+        // 🔧 Увеличил порог отсечения для tan/cot
+        if (!isExp && !isTan && !isCot && y !== null && (Math.abs(y) > 100 || !isFinite(y))) y = null;
+        if ((isTan || isCot) && y !== null && Math.abs(y) > 500) y = null;
         if (isExp && y !== null && !isFinite(y)) y = null;
 
         if (skip || y === null) {
@@ -948,12 +940,13 @@ function plotFunction(func, expr, type, shift) {
     
     const trace = { x: xVals, y: yVals, mode: 'lines', line: { color: '#2c3e50', width: 3 } };
     
-    // 🔧 ИСПРАВЛЕНИЕ: Для экспоненты показываем ось X как асимптоту
+    // 🔧 Увеличил Y-диапазон для tan/cot
     let yRange = null;
-    if (isTan || isCot || isInverse) {
+    if (isTan || isCot) {
+        yRange = [-20, 20];
+    } else if (isInverse) {
         yRange = [-10, 10];
     } else if (isExp) {
-        // 🔧 Для экспоненты: Y от -2 до максимума, чтобы ось X была видна
         const validY = yVals.filter(y => y !== null && isFinite(y));
         const maxY = validY.length > 0 ? Math.max(...validY) : 10;
         const minY = v > 0 ? v - 1 : -2;
