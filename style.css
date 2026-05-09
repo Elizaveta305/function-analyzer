@@ -1,3 +1,6 @@
+/* ========================================================================
+   ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И СБРОС
+   ======================================================================== */
 :root {
     --primary: #2c3e50;
     --accent: #3498db;
@@ -8,74 +11,305 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; padding: 20px; }
-.container { max-width: 1200px; margin: 0 auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 30px; }
 
-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid var(--border); padding-bottom: 20px; }
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    padding: 30px;
+}
+
+/* ========================================================================
+   ШАПКА И ВВОД
+   ======================================================================== */
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 20px;
+}
+
 h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
 .subtitle { color: #7f8c8d; font-size: 1.1rem; }
 
 .input-section { margin-bottom: 30px; }
-.input-card { background: #ecf0f1; padding: 25px; border-radius: 8px; border-left: 5px solid var(--accent); }
-.input-area { display: flex; gap: 15px; margin-top: 15px; }
-#functionInput { flex: 1; padding: 12px 15px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; font-family: 'Courier New', monospace; }
-.primary-btn { padding: 12px 25px; background: var(--accent); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+
+.input-card {
+    background: #ecf0f1;
+    padding: 25px;
+    border-radius: 8px;
+    border-left: 5px solid var(--accent);
+}
+
+.input-area {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+#functionInput {
+    flex: 1;
+    padding: 12px 15px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+}
+
+.primary-btn {
+    padding: 12px 25px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
 .primary-btn:hover { background: #2980b9; }
 
-.hint-box { margin-top: 15px; font-size: 0.9rem; color: #555; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 4px; }
-.hint-box code { background: #ddd; padding: 2px 5px; border-radius: 3px; font-family: monospace; color: #c0392b; }
+.hint-box {
+    margin-top: 15px;
+    font-size: 0.9rem;
+    color: #555;
+    background: rgba(255,255,255,0.5);
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.hint-box code {
+    background: #ddd;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+    color: #c0392b;
+}
+
 .quick-examples { margin-top: 15px; }
 .example-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-.example-btn { padding: 6px 12px; background: white; border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+.example-btn {
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
 .example-btn:hover { background: var(--accent); color: white; }
 
-.main-content { display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; }
-@media (max-width: 900px) { .main-content { grid-template-columns: 1fr; } }
+/* ========================================================================
+   ОСНОВНАЯ СЕТКА (GRID)
+   ======================================================================== */
+.main-content {
+    display: grid;
+    /* Левая колонка (свойства) : Правая колонка (график) */
+    grid-template-columns: 1fr 1.5fr; 
+    gap: 30px;
+}
 
-.properties-card, .graph-card { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+/* Адаптив для планшетов и телефонов */
+@media (max-width: 900px) { 
+    .main-content { 
+        grid-template-columns: 1fr !important; /* Всегда в одну колонку */
+    } 
+}
+
+/* ========================================================================
+   КАРТОЧКИ (Свойства и График)
+   ======================================================================== */
+.properties-card, .graph-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    /* Гарантируем, что карточки занимают отведенное место */
+    width: 100%;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
 .card-header h3 { color: var(--primary); margin-right: 10px; }
-.function-display { font-family: monospace; background: #f8f9fa; padding: 5px 10px; border-radius: 4px; color: #d35400; font-weight: bold; white-space: nowrap; }
 
-.property-item { display: flex; gap: 15px; padding: 12px; border-bottom: 1px solid #f0f0f0; }
-.property-item:last-child { border-bottom: none; }
-.property-icon { font-size: 1.5rem; min-width: 30px; text-align: center; }
-.property-title { font-weight: bold; color: #555; font-size: 0.9rem; }
-.property-value { color: var(--primary); font-weight: bold; font-size: 1.05rem; margin: 2px 0; }
-.property-desc { font-size: 0.85rem; color: #888; }
+.function-display {
+    font-family: monospace;
+    background: #f8f9fa;
+    padding: 5px 10px;
+    border-radius: 4px;
+    color: #d35400;
+    font-weight: bold;
+    white-space: nowrap;
+}
 
-.plot-container { height: 400px; width: 100%; position: relative; }
-.plot-loading { position: absolute; inset: 0; background: rgba(255,255,255,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; border-radius: 8px; }
-.plot-loading p { margin-top: 10px; color: #555; font-weight: 500; }
-.graph-controls { margin-top: 15px; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 6px; }
+/* ========================================================================
+   🔧 ФИКС СПИСКА СВОЙСТВ (ВЕРТИКАЛЬНЫЙ МАКЕТ)
+   ======================================================================== */
+
+/* Контейнер свойств - всегда флекс-колонка */
+.properties-card {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+#propertiesOutput {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100%;
+}
+
+/* Каждый элемент свойства */
+.property-item {
+    display: flex !important;
+    flex-direction: row !important; /* Иконка слева, текст справа */
+    align-items: flex-start !important; /* Выравнивание по верху для длинного текста */
+    width: 100% !important;
+    gap: 15px;
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 0;
+    box-sizing: border-box;
+}
+
+.property-item:last-child {
+    border-bottom: none !important;
+}
+
+.property-icon { 
+    font-size: 1.5rem; 
+    min-width: 30px; 
+    text-align: center; 
+}
+
+.property-title { 
+    font-weight: bold; 
+    color: #555; 
+    font-size: 0.9rem; 
+}
+
+.property-value { 
+    color: var(--primary); 
+    font-weight: bold; 
+    font-size: 1.05rem; 
+    margin: 2px 0; 
+    /* Разрешаем перенос длинных значений */
+    word-break: break-word; 
+}
+
+.property-desc { 
+    font-size: 0.85rem; 
+    color: #888; 
+}
+
+/* ========================================================================
+   ГРАФИК И УПРАВЛЕНИЕ
+   ======================================================================== */
+.plot-container { 
+    height: 400px; 
+    width: 100%; 
+    position: relative; 
+    background: #fff;
+}
+
+.graph-controls {
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 6px;
+}
+
 .control-group { display: flex; align-items: center; gap: 10px; }
 .range-slider { width: 150px; }
 .control-buttons { display: flex; gap: 5px; }
-.control-btn { padding: 5px 10px; background: white; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
+
+.control-btn {
+    padding: 5px 10px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+}
 .control-btn:hover { background: #eee; }
 
-.empty-state, .loading-state, .error-state { text-align: center; padding: 40px 20px; color: #777; }
-.spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+/* ========================================================================
+   СОСТОЯНИЯ (Загрузка, Ошибка)
+   ======================================================================== */
+.empty-state, .loading-state, .error-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #777;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--accent);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+}
+
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
 .error-state { color: #c0392b; background: #fadbd8; border-radius: 6px; }
 .error-icon { font-size: 2rem; margin-bottom: 5px; display: block; }
 
-footer { margin-top: 40px; text-align: center; font-size: 0.9rem; color: #95a5a6; border-top: 1px solid #eee; padding-top: 20px; }
+/* ========================================================================
+   ПОДВАЛ (FOOTER)
+   ======================================================================== */
+footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #95a5a6;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
 
+/* ========================================================================
+   АДАПТИВНОСТЬ (МОБИЛЬНЫЕ УСТРОЙСТВА)
+   ======================================================================== */
 @media (max-width: 768px) {
     body { padding: 10px; }
     .container { padding: 15px; }
     h1 { font-size: 1.6rem; }
+    
     .input-area { flex-direction: column; }
     #functionInput { width: 100%; margin-bottom: 10px; }
     .primary-btn { width: 100%; }
+    
     .main-content { gap: 20px; }
     .properties-card, .graph-card { padding: 15px; }
     .plot-container { height: 300px; }
+    
     .graph-controls { flex-direction: column; align-items: flex-start; gap: 10px; }
     .range-slider { flex: 1; }
     .control-buttons { width: 100%; justify-content: space-between; }
     .control-btn { flex: 1; }
+    
     .card-header { flex-direction: column; align-items: flex-start; }
     .property-item { gap: 10px; }
 }
