@@ -43,6 +43,7 @@
                         <button class="example-btn" data-func="x**2">x²</button>
                         <button class="example-btn" data-func="x^3">x³</button>
                         <button class="example-btn" data-func="1/x">1/x</button>
+                        <button class="example-btn" data-func="abs(x)">|x|</button>
                         <button class="example-btn" data-func="sqrt(x)">√x</button>
                         <button class="example-btn" data-func="exp(x)">eˣ</button>
                         <button class="example-btn" data-func="log(x)">ln x</button>
@@ -75,12 +76,7 @@
                         <span id="graphStatus" role="status" aria-live="polite">Ожидание...</span>
                     </div>
                 </div>
-                <div id="plot" class="plot-container" role="img" aria-label="Интерактивный график функции">
-                    <div id="plot-loading" class="plot-loading" hidden>
-                        <div class="spinner"></div>
-                        <p>Построение...</p>
-                    </div>
-                </div>
+                <div id="plot" class="plot-container" role="img" aria-label="Интерактивный график функции"></div>
                 <div class="graph-controls">
                     <div class="control-group">
                         <label for="xRange">Масштаб X:</label>
