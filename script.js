@@ -234,10 +234,16 @@ function applyShiftToProperties(baseProps, shift, type) {
         const z = Math.exp(-v) - h;
         props.sign = `f(x)<0 при x∈(${formatNumber(-h)}; ${formatNumber(z)}); f(x)>0 при x∈(${formatNumber(z)}; +∞)`;
     } else if (type === 'abs') {
-        if (v > 0) props.sign = 'f(x)>0 при всех x';
-        else if (v === 0) props.sign = 'f(x)≥0, f(x)=0 при одном x';
-        else props.sign = `f(x)<0 не бывает (модуль ≥0), но сдвиг вниз`;
+    if (v > 0) {
+        props.sign = 'f(x)>0 при всех x';
+    } else if (v === 0) {
+        props.sign = 'f(x)≥0, f(x)=0 при одном x';
+    } else {
+        const z1 = formatNumber(-h + v);
+        const z2 = formatNumber(-h - v);
+        props.sign = `f(x)<0 при x∈(${z1}; ${z2}); f(x)≥0 вне этого интервала`;
     }
+}
     
     if (type === 'sqrt') props.extremes = `min: ${formatNumber(v)} (при x=${formatNumber(-h)})`;
     else if (type === 'exp') props.extremes = `Не имеет (inf = ${formatNumber(v)})`;
