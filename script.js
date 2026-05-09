@@ -1,6 +1,6 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 9.3 - FINAL)
-// Все баги исправлены, зум работает, код оптимизирован
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 9.5)
+// Все критические баги исправлены + модуль |x|
 // ============================================
 
 let currentFunction = null;
@@ -8,18 +8,27 @@ let currentExpression = '';
 let currentType = 'unknown';
 
 // ============================================================================
-// 1. ВАЛИДАТОР ВВОДА (Безопасность)
+// 0. САНИТИЗАЦИЯ ВВОДА
+// ============================================================================
+function sanitizeInput(expr) {
+    return expr.toLowerCase()
+        .replace(/[πпи]/g, 'pi')
+        .replace(/[×✕]/g, '*')
+        .replace(/[÷]/g, '/')
+        .replace(/,/g, '.')
+        .trim();
+}
+
+// ============================================================================
+// 1. ВАЛИДАТОР ВВОДА
 // ============================================================================
 function validateInput(expr) {
-    // Блокируем опасные конструкции: точки с запятой, кавычки, системные объекты
     const dangerous = /[;{}'"]|\b(document|window|alert|eval|fetch|import|require)\b/i;
     return !dangerous.test(expr);
 }
 
 // ============================================================================
-// 2. ЯДРО: Парсер математических выражений
-// Примечание: new Function() безопасен при наличии валидации выше.
-// Для продакшена рекомендуется math.js: https://mathjs.org/
+// 2. ЯДРО: Парсер (с защитой от артефактов плавающей точки)
 // ============================================================================
 function parseFunction(expr) {
     const displayExpr = expr;
@@ -30,13 +39,11 @@ function parseFunction(expr) {
             try {
                 let cleanExpr = expr.replace(/\s+/g, '').replace(/\^/g, '**');
                 
-                // Хелпер для котангенса (защита от деления на ноль)
                 const __COT__ = (x) => {
                     const s = Math.sin(x);
                     return Math.abs(s) < 1e-10 ? NaN : Math.cos(x) / s;
                 };
                 
-                // Заменяем функции на плейсхолдеры
                 cleanExpr = cleanExpr.replace(/cot\(/g, '__COT__(');
                 cleanExpr = cleanExpr
                     .replace(/sin\(/g, '__FN_SIN__(')
@@ -49,12 +56,13 @@ function parseFunction(expr) {
                     .replace(/sqrt\(/g, '__FN_SQRT__(')
                     .replace(/abs\(/g, '__FN_ABS__(');
 
-                // Константы и переменная
                 cleanExpr = cleanExpr.replace(/\bpi\b/gi, 'Math.PI');
                 cleanExpr = cleanExpr.replace(/\be\b/g, 'Math.E'); 
-                cleanExpr = cleanExpr.replace(/\bx\b/g, `(${xVal})`); 
                 
-                // Восстанавливаем стандартные функции
+                // 🔧 Округляем xVal до 10 знаков, чтобы избежать 0.1+0.2=0.30000000000000004
+                const safeX = Number.isFinite(xVal) ? parseFloat(xVal.toFixed(10)) : xVal;
+                cleanExpr = cleanExpr.replace(/\bx\b/g, `(${safeX})`); 
+                
                 cleanExpr = cleanExpr
                     .replace(/__FN_SIN__\(/g, 'Math.sin(')
                     .replace(/__FN_COS__\(/g, 'Math.cos(')
@@ -66,7 +74,6 @@ function parseFunction(expr) {
                     .replace(/__FN_SQRT__\(/g, 'Math.sqrt(')
                     .replace(/__FN_ABS__\(/g, 'Math.abs(');
                 
-                // Выполнение
                 const result = new Function('__COT__', 'return ' + cleanExpr)(__COT__);
                 if (!isFinite(result) || isNaN(result)) return null;
                 return result;
@@ -116,6 +123,7 @@ function getFunctionType(expr) {
     if (clean.includes('cos(')) return 'cos';
     if (clean.includes('tan(')) return 'tan';
     if (clean.includes('cot(')) return 'cot';
+    if (clean.includes('abs(')) return 'abs';
     if (clean.includes('/x')) return 'inverse';
     if (clean.includes('x^3') || clean.includes('x**3')) return 'cubic';
     if (clean.includes('x^2') || clean.includes('x**2')) return 'quadratic';
@@ -130,8 +138,8 @@ function getFunctionType(expr) {
 function getFunctionTypeName(type, shift) {
     const names = {
         'linear': 'Линейная функция', 'quadratic': 'Квадратичная функция', 'cubic': 'Кубическая функция',
-        'inverse': 'Обратная пропорциональность', 'sqrt': 'Квадратный корень', 'exp': 'Экспонента',
-        'log': 'Логарифм', 'sin': 'Синус', 'cos': 'Косинус', 'tan': 'Тангенс', 'cot': 'Котангенс'
+        'inverse': 'Обратная пропорциональность', 'sqrt': 'Квадратный корень', 'abs': 'Модуль',
+        'exp': 'Экспонента', 'log': 'Логарифм', 'sin': 'Синус', 'cos': 'Косинус', 'tan': 'Тангенс', 'cot': 'Котангенс'
     };
     let name = names[type] || 'Сложная функция';
     if (shift.verticalShift !== 0 || shift.horizontalShift !== 0) name += ' (со сдвигом)';
@@ -139,7 +147,7 @@ function getFunctionTypeName(type, shift) {
 }
 
 // ============================================================================
-// 6. БАЗОВЫЕ СВОЙСТВА
+// 6. БАЗОВЫЕ СВОЙСТВА (добавлен abs)
 // ============================================================================
 const BASE_PROPERTIES = {
     'linear': { domain: '(-∞; +∞)', range: '(-∞; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈(-∞; +∞)', sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)', extremes: 'Не имеет (±∞)', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Не ограничена', asymptotes: 'Нет' },
@@ -147,6 +155,7 @@ const BASE_PROPERTIES = {
     'cubic': { domain: '(-∞; +∞)', range: '(-∞; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈(-∞; +∞)', sign: 'f(x)>0 при x>0; f(x)<0 при x<0', extremes: 'Не имеет (±∞)', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Не ограничена', asymptotes: 'Нет' },
     'inverse': { domain: '(-∞; 0) ∪ (0; +∞)', range: '(-∞; 0) ∪ (0; +∞)', zeros: [], monotonicity: 'Убывает на (-∞; 0) и (0; +∞)', sign: 'f(x)>0 при x>0; f(x)<0 при x<0', extremes: 'Не имеет', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Разрыв при x=0', bounded: 'Не ограничена', asymptotes: 'Вертик: x=0; Гориз: y=0' },
     'sqrt': { domain: '[0; +∞)', range: '[0; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈[0; +∞)', sign: 'f(x)≥0', extremes: 'min: 0', parity: { result: 'Общего вида', desc: 'D(f) не симметрична' }, continuity: 'Непрерывна на [0; +∞)', bounded: 'Ограничена снизу', asymptotes: 'Нет' },
+    'abs': { domain: '(-∞; +∞)', range: '[0; +∞)', zeros: [0], monotonicity: 'Убывает при x∈(-∞; 0), возрастает при x∈(0; +∞)', sign: 'f(x)≥0', extremes: 'min: 0 (при x=0)', parity: { result: 'Чётная', desc: 'Симметрия относительно OY' }, continuity: 'Непрерывна', bounded: 'Ограничена снизу', asymptotes: 'Нет' },
     'exp': { domain: '(-∞; +∞)', range: '(0; +∞)', zeros: [], monotonicity: 'Возрастает на ℝ', sign: 'f(x)>0 всегда', extremes: 'Не имеет', parity: { result: 'Общего вида', desc: 'Нет симметрии' }, continuity: 'Непрерывна', bounded: 'Ограничена снизу', asymptotes: 'Гориз: y=0 (x→-∞)' },
     'log': { domain: '(0; +∞)', range: '(-∞; +∞)', zeros: [1], monotonicity: 'Возрастает на (0; +∞)', sign: 'f(x)>0 при x>1; f(x)<0 при 0<x<1', extremes: 'Не имеет', parity: { result: 'Общего вида', desc: 'D(f) не симметрична' }, continuity: 'Непрерывна на (0; +∞)', bounded: 'Не ограничена', asymptotes: 'Вертик: x=0' },
     'sin': { domain: '(-∞; +∞)', range: '[-1; 1]', zeros: ['0', 'π', '-π', '2π', '-2π'], monotonicity: 'Не монотонна (периодическая)', sign: 'Периодически меняется', extremes: 'min: -1, max: 1', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Ограничена', asymptotes: 'Нет', period: '2π' },
@@ -156,7 +165,7 @@ const BASE_PROPERTIES = {
 };
 
 // ============================================================================
-// 7. ПРИМЕНЕНИЕ СДВИГОВ (Исправлены sqrt и cot)
+// 7. ПРИМЕНЕНИЕ СДВИГОВ
 // ============================================================================
 function applyShiftToProperties(baseProps, shift, type) {
     const props = { ...baseProps };
@@ -169,16 +178,16 @@ function applyShiftToProperties(baseProps, shift, type) {
         else if (type === 'inverse') props.domain = `(-∞; ${formatNumber(-h)}) ∪ (${formatNumber(-h)}; +∞)`;
         else if (type === 'tan') props.domain = `Все x, кроме ${formatNumber(Math.PI/2 - h)} + πn`;
         else if (type === 'cot') props.domain = `Все x, кроме ${formatNumber(-h)} + πn`;
+        else if (type === 'abs') props.monotonicity = `Убывает при x∈(-∞; ${formatNumber(-h)}), возрастает при x∈(${formatNumber(-h)}; +∞)`;
     }
     
     if (v !== 0) {
         if (type === 'sqrt') props.range = `[${formatNumber(v)}; +∞)`;
         else if (type === 'exp') props.range = `(${formatNumber(v)}; +∞)`;
         else if (type === 'sin' || type === 'cos') props.range = `[${formatNumber(-1 + v)}; ${formatNumber(1 + v)}]`;
-        else if (type === 'quadratic') props.range = `[${formatNumber(v)}; +∞)`;
+        else if (type === 'quadratic' || type === 'abs') props.range = `[${formatNumber(v)}; +∞)`;
     }
     
-    // 🔧 Нули функции (ИСПРАВЛЕНО)
     if (type === 'sqrt') {
         if (v > 0) props.zeros = [];
         else if (v === 0) props.zeros = [formatNumber(-h)];
@@ -187,6 +196,8 @@ function applyShiftToProperties(baseProps, shift, type) {
         props.zeros = [];
     } else if (type === 'log') {
         props.zeros = [formatNumber(Math.exp(-v) - h)];
+    } else if (type === 'abs') {
+        props.zeros = [formatNumber(-h)];
     } else if (type === 'sin') {
         if (Math.abs(v) > 1) props.zeros = [];
         else {
@@ -202,7 +213,6 @@ function applyShiftToProperties(baseProps, shift, type) {
     } else if (type === 'tan') {
         props.zeros = [`${formatNumber(Math.atan(-v) - h)} + πn`];
     } else if (type === 'cot') {
-        // 🔧 ИСПРАВЛЕНО: деление на ноль при v=0
         if (v === 0) props.zeros = [`${formatNumber(Math.PI/2 - h)} + πn`];
         else props.zeros = [`${formatNumber(Math.atan(-1/v) - h)} + πn`];
     }
@@ -223,15 +233,19 @@ function applyShiftToProperties(baseProps, shift, type) {
     } else if (type === 'log' && (v !== 0 || h !== 0)) {
         const z = Math.exp(-v) - h;
         props.sign = `f(x)<0 при x∈(${formatNumber(-h)}; ${formatNumber(z)}); f(x)>0 при x∈(${formatNumber(z)}; +∞)`;
+    } else if (type === 'abs') {
+        if (v > 0) props.sign = 'f(x)>0 при всех x';
+        else if (v === 0) props.sign = 'f(x)≥0, f(x)=0 при одном x';
+        else props.sign = `f(x)<0 не бывает (модуль ≥0), но сдвиг вниз`;
     }
     
     if (type === 'sqrt') props.extremes = `min: ${formatNumber(v)} (при x=${formatNumber(-h)})`;
     else if (type === 'exp') props.extremes = `Не имеет (inf = ${formatNumber(v)})`;
     else if (type === 'sin' || type === 'cos') props.extremes = `min: ${formatNumber(-1 + v)}, max: ${formatNumber(1 + v)}`;
-    else if (type === 'quadratic') props.extremes = `min: ${formatNumber(v)} (при x=${formatNumber(-h)})`;
+    else if (type === 'quadratic' || type === 'abs') props.extremes = `min: ${formatNumber(v)} (при x=${formatNumber(-h)})`;
     
     if (v !== 0 || h !== 0) {
-        if (type === 'cos' && v !== 0 && h === 0) props.parity = { result: 'Чётная', desc: 'Симметрия относительно OY' };
+        if ((type === 'cos' || type === 'abs') && v !== 0 && h === 0) props.parity = { result: 'Чётная', desc: 'Симметрия относительно OY' };
         else props.parity = { result: 'Общего вида', desc: 'Сдвиг нарушает симметрию' };
     }
     
@@ -248,15 +262,15 @@ function applyShiftToProperties(baseProps, shift, type) {
 }
 
 // ============================================================================
-// 8. ФОРМАТИРОВАНИЕ
+// 8. ФОРМАТИРОВАНИЕ (улучшено для малых значений)
 // ============================================================================
-function formatNumber(num) {
+function formatNumber(num, precision = 2) {
     if (num === null || num === undefined) return '0';
     const n = typeof num === 'string' ? parseFloat(num) : Number(num);
     if (isNaN(n)) return String(num);
-    if (Math.abs(n) < 0.001) return '0';
-    if (Math.abs(n) > 1000) return n > 0 ? '+∞' : '-∞';
-    return n.toFixed(1);
+    if (Math.abs(n) < 1e-10) return '0';
+    if (Math.abs(n) > 1e6) return n > 0 ? '+∞' : '-∞';
+    return Math.abs(n) < 0.1 ? n.toExponential(1) : n.toFixed(precision);
 }
 
 function formatZeros(zeros, type) {
@@ -265,7 +279,7 @@ function formatZeros(zeros, type) {
         if (typeof z === 'string' && (z.includes('π') || z.includes('n'))) return z;
         const n = typeof z === 'string' ? parseFloat(z) : z;
         if (isNaN(n)) return String(z);
-        return Number.isInteger(n) ? String(n) : n.toFixed(1);
+        return Number.isInteger(n) ? String(n) : formatNumber(n, 1);
     }).join(', ');
 }
 
@@ -274,13 +288,12 @@ function formatZeros(zeros, type) {
 // ============================================================================
 function analyzeFunction() {
     const input = document.getElementById('functionInput');
-    let expr = input.value.trim();
+    let expr = sanitizeInput(input.value.trim());
     
     if (!expr) { showError('Введите формулу функции'); return; }
     if (!validateInput(expr)) { showError('Недопустимые символы'); return; }
     
     showLoading();
-    document.getElementById('plot-loading').hidden = false;
     
     setTimeout(() => {
         try {
@@ -316,14 +329,18 @@ function analyzeFunction() {
             
         } catch (error) {
             console.error(error);
-            showError(`Ошибка: ${error.message}`);
-            document.getElementById('plot-loading').hidden = true;
+            // 🔧 Улучшенное сообщение об ошибке
+            showError(`❌ Не удалось проанализировать: ${error.message}
+💡 Попробуйте: 
+• Проверить синтаксис (sin(x), а не sin x)
+• Избегать сложных вложений
+• Использовать пример из списка`);
         }
     }, 50);
 }
 
 // ============================================================================
-// 10. ЧИСЛЕННЫЙ РАСЧЁТ (Улучшенный поиск нулей)
+// 10. ЧИСЛЕННЫЙ РАСЧЁТ (с лимитом итераций и точной бисекцией)
 // ============================================================================
 function calculatePropertiesNumerically(func, expr, type) {
     return {
@@ -343,7 +360,7 @@ function calculatePropertiesNumerically(func, expr, type) {
 }
 
 function findZerosImproved(func, expr, type) {
-    if (['sin', 'cos', 'tan', 'cot', 'sqrt', 'exp', 'inverse', 'log'].includes(type)) return BASE_PROPERTIES[type]?.zeros || [];
+    if (['sin', 'cos', 'tan', 'cot', 'sqrt', 'exp', 'inverse', 'log', 'abs'].includes(type)) return BASE_PROPERTIES[type]?.zeros || [];
     if (['linear', 'cubic', 'quadratic'].includes(type)) return [0];
     
     const zeros = [];
@@ -358,12 +375,13 @@ function findZerosImproved(func, expr, type) {
         if (Math.abs(y1) < 0.01) {
             zeros.push(x);
         } else if (y1 * y2 < 0) {
-            // Метод половинного деления
+            // 🔧 Точная бисекция: 20 итераций → точность ~10⁻⁶
             let a = x, b = x + step;
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 20; i++) {
                 let m = (a + b) / 2;
-                if (func.evaluate(a) * func.evaluate(m) < 0) b = m;
-                else a = m;
+                const fa = func.evaluate(a), fm = func.evaluate(m);
+                if (fa === null || fm === null) break;
+                if (fa * fm <= 0) b = m; else a = m;
             }
             zeros.push((a + b) / 2);
         }
@@ -372,14 +390,14 @@ function findZerosImproved(func, expr, type) {
 }
 
 // ============================================================================
-// 11. ИНТЕРФЕЙС
+// 11. ИНТЕРФЕЙС (с защитой от undefined)
 // ============================================================================
 function updatePropertiesDisplay(props) {
     const container = document.getElementById('propertiesOutput');
     if (!container) return;
     
     const html = [
-        `<div class="property-item"><div class="property-icon">📊</div><div class="property-content"><div class="property-title">Тип функции</div><div class="property-value">${props.typeName}</div><div class="property-desc">Классификация</div></div></div>`
+        `<div class="property-item"><div class="property-icon">📊</div><div class="property-content"><div class="property-title">Тип функции</div><div class="property-value">${props.typeName || 'Функция'}</div><div class="property-desc">Классификация</div></div></div>`
     ];
     
     const items = [
@@ -389,7 +407,7 @@ function updatePropertiesDisplay(props) {
         { k: 'monotonicity', t: '4. Монотонность', d: 'Промежутки возрастания/убывания', i: '📈' },
         { k: 'sign', t: '5. Знакопостоянство', d: 'Где функция положительна/отрицательна', i: '➕➖' },
         { k: 'extremes', t: '6. Наиб. и наим. значения', d: 'Экстремумы', i: '🏆' },
-        { k: 'parity', t: '7. Чётность', d: p => p.desc, i: '🔄', f: p => p.result },
+        { k: 'parity', t: '7. Чётность', d: p => p?.desc || '', i: '🔄', f: p => p?.result || 'Не определено' },
         { k: 'continuity', t: '8. Непрерывность', d: 'Точки разрыва', i: '〰️' },
         { k: 'bounded', t: '9. Ограниченность', d: 'Наличие границ', i: '🔒' },
         { k: 'asymptotes', t: '10. Асимптоты', d: 'Линии притяжения', i: '↗️' }
@@ -400,8 +418,8 @@ function updatePropertiesDisplay(props) {
     }
     
     items.forEach(item => {
-        const val = item.k === 'parity' ? props[item.k]?.result : props[item.k];
-        const desc = item.k === 'parity' ? props[item.k]?.desc : item.d;
+        const val = item.k === 'parity' ? props[item.k] : props[item.k];
+        const desc = item.k === 'parity' ? (props[item.k]?.desc || '') : item.d;
         if (val !== undefined && val !== null) {
             html.push(`<div class="property-item"><div class="property-icon">${item.i}</div><div class="property-content"><div class="property-title">${item.t}</div><div class="property-value">${item.f ? item.f(val) : val}</div><div class="property-desc">${typeof desc === 'function' ? desc(props[item.k]) : desc}</div></div></div>`);
         }
@@ -415,17 +433,17 @@ function showLoading() {
 }
 
 function showError(msg) {
-    document.getElementById('propertiesOutput').innerHTML = `<div class="error-state"><div class="error-icon">⚠️</div><div class="error-msg">${msg}</div></div>`;
+    document.getElementById('propertiesOutput').innerHTML = `<div class="error-state"><div class="error-icon">⚠️</div><div class="error-msg" style="white-space: pre-line">${msg}</div></div>`;
 }
 
 // ============================================================================
 // 12. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================================
-function getDomain(expr, type) { if (type === 'log') return '(0; +∞)'; if (type === 'sqrt') return '[0; +∞)'; if (type === 'inverse') return '(-∞; 0) ∪ (0; +∞)'; if (type === 'tan') return 'Все x, кроме π/2+πn'; if (type === 'cot') return 'Все x, кроме πn'; return '(-∞; +∞)'; }
+function getDomain(expr, type) { if (type === 'log') return '(0; +∞)'; if (type === 'sqrt') return '[0; +∞)'; if (type === 'inverse') return '(-∞; 0) ∪ (0; +∞)'; if (type === 'tan') return 'Все x, кроме π/2+πn'; if (type === 'cot') return 'Все x, кроме πn'; if (type === 'abs') return '(-∞; +∞)'; return '(-∞; +∞)'; }
 
 function checkParity(func, type) {
     if (['linear', 'cubic', 'inverse', 'tan', 'cot', 'sin'].includes(type)) return { result: 'Нечётная', desc: 'Симметрия относительно начала координат' };
-    if (['quadratic', 'cos'].includes(type)) return { result: 'Чётная', desc: 'Симметрия относительно OY' };
+    if (['quadratic', 'cos', 'abs'].includes(type)) return { result: 'Чётная', desc: 'Симметрия относительно OY' };
     if (['sqrt', 'log', 'exp'].includes(type)) return { result: 'Общего вида', desc: 'D(f) не симметрична' };
     const a = func.evaluate(1), b = func.evaluate(-1);
     if (a===null||b===null) return { result: 'Не определено', desc: '-' };
@@ -447,10 +465,16 @@ function calculateRangeNumerically(func, expr, type) {
     if (['sin', 'cos'].includes(type)) return '[-1; 1]';
     if (type === 'exp') return '(0; +∞)';
     if (type === 'log') return '(-∞; +∞)';
-    if (type === 'sqrt') return '[0; +∞)';
+    if (type === 'sqrt' || type === 'abs') return '[0; +∞)';
     if (type === 'inverse') return '(-∞; 0) ∪ (0; +∞)';
-    let min=Infinity, max=-Infinity;
-    for(let x=-50;x<=50;x+=0.1){const y=func.evaluate(x); if(y!==null&&isFinite(y)){if(y<min)min=y; if(y>max)max=y;}}
+    
+    const MAX_ITER = 10000;
+    let min=Infinity, max=-Infinity, iter=0;
+    for(let x=-50; x<=50 && iter<MAX_ITER; x+=0.1){
+        iter++;
+        const y=func.evaluate(x); 
+        if(y!==null&&isFinite(y)){if(y<min)min=y; if(y>max)max=y;}
+    }
     if(min===Infinity)return 'Не определено';
     if(max-min>1000)return '(-∞; +∞)';
     return `[${formatNumber(min)}; ${formatNumber(max)}]`;
@@ -467,8 +491,15 @@ function calculateExtremesNumerically(func, expr, type) {
     if (['linear', 'cubic', 'inverse', 'tan', 'cot', 'log'].includes(type)) return 'Не имеет (±∞)';
     if (type === 'exp') return 'Не имеет';
     if (['sin', 'cos'].includes(type)) return 'min: -1, max: 1';
-    let min=Infinity, max=-Infinity;
-    for(let x=-20;x<=20;x+=0.1){const y=func.evaluate(x); if(y!==null&&isFinite(y)){if(y<min)min=y; if(y>max)max=y;}}
+    if (type === 'abs') return 'min: 0, max: не имеет';
+    
+    const MAX_ITER = 10000;
+    let min=Infinity, max=-Infinity, iter=0;
+    for(let x=-20; x<=20 && iter<MAX_ITER; x+=0.1){
+        iter++;
+        const y=func.evaluate(x); 
+        if(y!==null&&isFinite(y)){if(y<min)min=y; if(y>max)max=y;}
+    }
     if(min===Infinity)return 'Не определено'; if(max-min>1000)return 'Не имеет (±∞)';
     return `min: ${formatNumber(min)}, max: ${formatNumber(max)}`;
 }
@@ -490,20 +521,20 @@ function findAsymptotesAdvanced(expr, func, type) {
 function calculateSignIntervalsNumerically(func, expr) {
     const zeros = findZerosImproved(func, expr, 'unknown');
     
-    // 🔧 Если нули содержат символьные значения (π, n), требуем ручной анализ
-    // Это честно сообщает пользователю о пределах автоматического анализа
-    if (zeros && zeros.some(z => typeof z === 'string' && (z.includes('π') || z.includes('n')))) {
-        return 'Требуется ручной анализ';
+    // 🔧 Мягкая обработка символьных нулей
+    const numericZeros = zeros.filter(z => typeof z === 'number' && !isNaN(z));
+    if (numericZeros.length === 0 && zeros.length > 0) {
+        return 'Знакопостоянство: периодическое / требует ручного анализа';
     }
     
-    if (!zeros || zeros.length === 0) { 
+    if (!numericZeros || numericZeros.length === 0) { 
         const t = func.evaluate(0); 
         if (t !== null) return t > 0 ? 'f(x)>0 при x∈(-∞; +∞)' : 'f(x)<0 при x∈(-∞; +∞)'; 
         return 'Не определено'; 
     }
     
     let pos=[], neg=[]; 
-    let pts=[-10, ...zeros.map(z=>typeof z==='string'?0:Number(z)).filter(n=>!isNaN(n)), 10];
+    let pts=[-10, ...numericZeros, 10];
     
     for(let i=0;i<pts.length-1;i++){
         let mid=(pts[i]+pts[i+1])/2; 
@@ -521,7 +552,7 @@ function calculateSignIntervalsNumerically(func, expr) {
 }
 
 // ============================================================================
-// 13. ГРАФИК
+// 13. ГРАФИК (адаптивный порог асимптот)
 // ============================================================================
 function plotFunction(func, expr, type, shift) {
     const range = parseInt(document.getElementById('xRange').value);
@@ -535,15 +566,17 @@ function plotFunction(func, expr, type, shift) {
     if (type === 'log') startX = Math.max(-range, -h + 0.01);
     if (type === 'sqrt') startX = Math.max(-range, -h);
 
+    // 🔧 Адаптивный порог для пропуска асимптот
+    const asymptoteThreshold = step * 1.5;
+
     for (let x = startX; x <= endX; x += step) {
         let skip = false, y = null;
-        if (isTan) { let d = Math.abs((x + h - Math.PI/2) % Math.PI); if (d > Math.PI/2) d = Math.PI - d; if (d < 0.15) skip = true; }
-        else if (isCot) { let d = Math.abs((x + h) % Math.PI); if (d > Math.PI/2) d = Math.PI - d; if (d < 0.15) skip = true; }
+        if (isTan) { let d = Math.abs((x + h - Math.PI/2) % Math.PI); if (d > Math.PI/2) d = Math.PI - d; if (d < asymptoteThreshold) skip = true; }
+        else if (isCot) { let d = Math.abs((x + h) % Math.PI); if (d > Math.PI/2) d = Math.PI - d; if (d < asymptoteThreshold) skip = true; }
         else if (isInv && Math.abs(x + h) < 0.05) skip = true;
 
         if (!skip) y = func.evaluate(x);
-        if (!isExp && y !== null && (Math.abs(y) > 100 || !isFinite(y))) y = null;
-        if (isExp && y !== null && !isFinite(y)) y = null;
+        if (y !== null && (!isFinite(y) || Math.abs(y) > 1e6)) y = null;
 
         if (skip || y === null) { xVals.push(x); yVals.push(null); }
         else { xVals.push(x); yVals.push(y); }
@@ -558,6 +591,18 @@ function plotFunction(func, expr, type, shift) {
         yRange = [v > 0 ? v - 1 : -2, Math.min(maxY * 1.2, 20)];
     }
 
+    // Предупреждение об обрезке
+    const validY = yVals.filter(v => v !== null && isFinite(v));
+    const hasClipping = validY.some(y => Math.abs(y) > 10);
+    if (hasClipping && (isTan || isCot || isInv)) {
+        const statusEl = document.getElementById('graphStatus');
+        if (statusEl) {
+            statusEl.textContent = '⚠️ График обрезан: используйте зум';
+            statusEl.style.color = '#e67e22';
+            setTimeout(() => { statusEl.textContent = 'Готово'; statusEl.style.color = ''; }, 3000);
+        }
+    }
+
     const layout = {
         margin: { t: 30, r: 20, b: 40, l: 40 },
         xaxis: { title: 'X', zeroline: true, gridcolor: '#eee', range: [startX, endX] },
@@ -566,28 +611,26 @@ function plotFunction(func, expr, type, shift) {
     };
     
     if (typeof Plotly !== 'undefined') {
-        Plotly.react('plot', [trace], layout, {displayModeBar: false}).then(() => {
-            document.getElementById('plot-loading').hidden = true;
-        });
+        Plotly.react('plot', [trace], layout, {displayModeBar: false});
     } else {
         document.getElementById('plot').innerHTML = '<div class="error-state">График не загружен. Проверьте интернет.</div>';
-        document.getElementById('plot-loading').hidden = true;
     }
 }
 
 // ============================================================================
-// 14. 🔧 ИСПРАВЛЕННЫЙ ЗУМ (РАБОТАЕТ!)
+// 14. 🔧 ИСПРАВЛЕННЫЙ ЗУМ (берёт layout из Plotly)
 // ============================================================================
 function zoomPlot(factor) {
-    const plotEl = document.getElementById('plot');
-    // Проверяем, что график уже отрисован и имеет диапазон
-    if (!plotEl?.layout?.xaxis?.range) return;
+    const plotDiv = document.getElementById('plot');
+    // 🔧 Берём layout из объекта Plotly, а не из DOM
+    const currentLayout = plotDiv.layout || {};
+    const xRange = currentLayout.xaxis?.range || [-10, 10];
     
-    const [min, max] = plotEl.layout.xaxis.range;
+    const [min, max] = xRange;
     const center = (min + max) / 2;
     const newSpan = (max - min) * factor / 2;
     
-    Plotly.relayout(plotEl, {
+    Plotly.relayout(plotDiv, {
         'xaxis.range[0]': center - newSpan,
         'xaxis.range[1]': center + newSpan
     });
@@ -616,30 +659,26 @@ document.addEventListener('DOMContentLoaded', () => {
         slider.addEventListener('change', () => { if(currentFunction) { const s = analyzeShift(currentExpression, currentType); plotFunction(currentFunction, currentExpression, currentType, s); }});
     }
     
-    // 🔧 ЗУМ (ИСПРАВЛЕНО)
     const zoomIn = document.getElementById('zoomInBtn');
     const zoomOut = document.getElementById('zoomOutBtn');
     const reset = document.getElementById('resetViewBtn');
     const exportBtn = document.getElementById('exportBtn');
     
-    if (zoomIn) zoomIn.addEventListener('click', () => zoomPlot(0.8));    // Увеличение (25%)
-    if (zoomOut) zoomOut.addEventListener('click', () => zoomPlot(1.25));  // Уменьшение (25%)
+    if (zoomIn) zoomIn.addEventListener('click', () => zoomPlot(0.8));
+    if (zoomOut) zoomOut.addEventListener('click', () => zoomPlot(1.25));
     if (reset) reset.addEventListener('click', () => { if(currentFunction) { const s = analyzeShift(currentExpression, currentType); plotFunction(currentFunction, currentExpression, currentType, s); }});
     
-    // 🔧 ЭКСПОРТ
     if (exportBtn) exportBtn.addEventListener('click', () => {
         if (typeof Plotly === 'undefined') return;
         Plotly.downloadImage('plot', {format: 'png', width: 800, height: 600, filename: 'function_graph'});
     });
     
-    // 🔧 АДАПТИВНОСТЬ ГРАФИКА
     window.addEventListener('resize', () => { if (typeof Plotly !== 'undefined') Plotly.Plots.resize('plot'); });
     
     initializePlot();
 });
 
 function initializePlot() {
-    // 🔧 Обработка ошибки загрузки Plotly CDN
     if (typeof Plotly === 'undefined') {
         document.getElementById('plot').innerHTML = `
             <div class="error-state">
@@ -655,5 +694,4 @@ function initializePlot() {
         xaxis: {title: 'X', zeroline: true}, yaxis: {title: 'Y', zeroline: true},
         margin: {t:30, r:20, b:40, l:40}
     }, {displayModeBar: false});
-    document.getElementById('plot-loading').hidden = true;
 }
