@@ -234,12 +234,18 @@ const BASE_PROPERTIES = {
 };
 
 // ============================================================================
-// 8. ПРИМЕНЕНИЕ СДВИГОВ
+// 8. ПРИМЕНЕНИЕ СДВИГОВ (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ============================================================================
 function applyShiftToProperties(baseProps, shift, type) {
     const props = { ...baseProps };
     const v = shift.verticalShift;
     const h = shift.horizontalShift;
+    
+    // ✅ ЕСЛИ СДВИГОВ НЕТ — возвращаем базовые свойства без изменений
+    // (включая точные формулы нулей)
+    if (v === 0 && h === 0) {
+        return baseProps;
+    }
     
     if (h !== 0) {
         if (type === 'sqrt') props.domain = `[${formatNumber(-h)}; +∞)`;
@@ -257,6 +263,7 @@ function applyShiftToProperties(baseProps, shift, type) {
         else if (type === 'quadratic' || type === 'abs') props.range = `[${formatNumber(v)}; +∞)`;
     }
     
+    // ✅ Обновляем нули ТОЛЬКО если есть сдвиги
     if (type === 'sqrt') {
         if (v > 0) props.zeros = [];
         else if (v === 0) props.zeros = [formatNumber(-h)];
@@ -335,7 +342,6 @@ function applyShiftToProperties(baseProps, shift, type) {
     
     return props;
 }
-
 // ============================================================================
 // 9. ФОРМАТИРОВАНИЕ
 // ============================================================================
