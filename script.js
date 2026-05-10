@@ -1,6 +1,6 @@
 // ============================================
-// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 10.3)
-// Исправления: совместимость со старыми браузерами, безопасность, разрывы графика
+// АНАЛИЗАТОР МАТЕМАТИЧЕСКИХ ФУНКЦИЙ (Версия 10.4)
+// Итоговая версия: точные формулы, чистый график, безопасность
 // ============================================
 
 let currentFunction = null;
@@ -119,7 +119,6 @@ function parseFunction(expr) {
                 const safeX = Number.isFinite(xVal) ? parseFloat(xVal.toFixed(10)) : xVal;
                 
                 // ✅ УНИВЕРСАЛЬНАЯ ЗАМЕНА: работает в любых браузерах (без lookbehind)
-                // Заменяем x только если он не часть слова (не рядом с буквами/цифрами/_)
                 cleanExpr = cleanExpr.replace(/(^|[^a-zA-Z0-9_])x([^a-zA-Z0-9_]|$)/g, '$1(' + safeX + ')$2');
                 // Второй проход для случаев вроде "x+x"
                 cleanExpr = cleanExpr.replace(/(^|[^a-zA-Z0-9_])x([^a-zA-Z0-9_]|$)/g, '$1(' + safeX + ')$2');
@@ -172,7 +171,7 @@ function analyzeShift(expr, baseType) {
 }
 
 // ============================================================================
-// 5. ОПРЕДЕЛЕНИЕ ТИПА ФУНКЦИИ (ПРОВЕРКА НА НЕСКОЛЬКО ФУНКЦИЙ)
+// 5. ОПРЕДЕЛЕНИЕ ТИПА ФУНКЦИИ
 // ============================================================================
 function getFunctionType(expr) {
     let clean = expr.toLowerCase().replace(/\s/g, '').replace(/y=/g, '').replace(/f\(x\)=/g, '');
@@ -215,21 +214,23 @@ function getFunctionTypeName(type, shift) {
 }
 
 // ============================================================================
-// 7. БАЗОВЫЕ СВОЙСТВА
+// 7. БАЗОВЫЕ СВОЙСТВА (С ТОЧНЫМИ ФОРМУЛАМИ ДЛЯ ТРИГОНОМЕТРИИ)
 // ============================================================================
 const BASE_PROPERTIES = {
     'linear': { domain: '(-∞; +∞)', range: '(-∞; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈(-∞; +∞)', sign: 'f(x)>0 при x∈(0; +∞); f(x)<0 при x∈(-∞; 0)', extremes: 'Не имеет (±∞)', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Не ограничена', asymptotes: 'Нет' },
     'quadratic': { domain: '(-∞; +∞)', range: '[0; +∞)', zeros: [0], monotonicity: 'Убывает при x∈(-∞; 0), возрастает при x∈(0; +∞)', sign: 'f(x)>0 при x≠0', extremes: 'min: 0 (при x=0)', parity: { result: 'Чётная', desc: 'Симметрия относительно OY' }, continuity: 'Непрерывна', bounded: 'Ограничена снизу', asymptotes: 'Нет' },
-    'cubic': { domain: '(-∞; +∞)', range: '(-∞; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈(-∞; +∞)', sign: 'f(x)>0 при x>0; f(x)<0 при x<0', extremes: 'Не имеет (±∞)', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Не ограничена', asymptotes: 'Нет' },
+    'cubic': { domain: '(-∞; +∞)', range: '(-∞; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈(-∞; +)', sign: 'f(x)>0 при x>0; f(x)<0 при x<0', extremes: 'Не имеет (±∞)', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Не ограничена', asymptotes: 'Нет' },
     'inverse': { domain: '(-∞; 0) ∪ (0; +∞)', range: '(-∞; 0) ∪ (0; +∞)', zeros: [], monotonicity: 'Убывает на (-∞; 0) и (0; +∞)', sign: 'f(x)>0 при x>0; f(x)<0 при x<0', extremes: 'Не имеет', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Разрыв при x=0', bounded: 'Не ограничена', asymptotes: 'Вертик: x=0; Гориз: y=0' },
     'sqrt': { domain: '[0; +∞)', range: '[0; +∞)', zeros: [0], monotonicity: 'Возрастает при x∈[0; +∞)', sign: 'f(x)≥0', extremes: 'min: 0', parity: { result: 'Общего вида', desc: 'D(f) не симметрична' }, continuity: 'Непрерывна на [0; +∞)', bounded: 'Ограничена снизу', asymptotes: 'Нет' },
     'abs': { domain: '(-∞; +∞)', range: '[0; +∞)', zeros: [0], monotonicity: 'Убывает при x∈(-∞; 0), возрастает при x∈(0; +∞)', sign: 'f(x)≥0', extremes: 'min: 0 (при x=0)', parity: { result: 'Чётная', desc: 'Симметрия относительно OY' }, continuity: 'Непрерывна', bounded: 'Ограничена снизу', asymptotes: 'Нет' },
     'exp': { domain: '(-∞; +∞)', range: '(0; +∞)', zeros: [], monotonicity: 'Возрастает на ℝ', sign: 'f(x)>0 всегда', extremes: 'Не имеет', parity: { result: 'Общего вида', desc: 'Нет симметрии' }, continuity: 'Непрерывна', bounded: 'Ограничена снизу', asymptotes: 'Гориз: y=0 (x→-∞)' },
     'log': { domain: '(0; +∞)', range: '(-∞; +∞)', zeros: [1], monotonicity: 'Возрастает на (0; +∞)', sign: 'f(x)>0 при x>1; f(x)<0 при 0<x<1', extremes: 'Не имеет', parity: { result: 'Общего вида', desc: 'D(f) не симметрична' }, continuity: 'Непрерывна на (0; +∞)', bounded: 'Не ограничена', asymptotes: 'Вертик: x=0' },
-    'sin': { domain: '(-∞; +∞)', range: '[-1; 1]', zeros: ['0', 'π', '-π', '2π', '-2π'], monotonicity: 'Не монотонна (периодическая)', sign: 'Периодически меняется', extremes: 'min: -1, max: 1', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Ограничена', asymptotes: 'Нет', period: '2π' },
-    'cos': { domain: '(-∞; +∞)', range: '[-1; 1]', zeros: ['π/2', '-π/2', '3π/2', '-3π/2'], monotonicity: 'Не монотонна (периодическая)', sign: 'Периодически меняется', extremes: 'min: -1, max: 1', parity: { result: 'Чётная', desc: 'Симметрия относительно OY' }, continuity: 'Непрерывна', bounded: 'Ограничена', asymptotes: 'Нет', period: '2π' },
-    'tan': { domain: 'Все x, кроме π/2+πn', range: '(-∞; +∞)', zeros: ['0', 'π', '-π', '2π', '-2π'], monotonicity: 'Возрастает на промежутках', sign: 'Периодически меняется', extremes: 'Не имеет', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Разрывна при π/2+πn', bounded: 'Не ограничена', asymptotes: 'Вертик: x=π/2+πn', period: 'π' },
-    'cot': { domain: 'Все x, кроме πn', range: '(-∞; +∞)', zeros: ['π/2', '-π/2', '3π/2', '-3π/2'], monotonicity: 'Убывает на промежутках', sign: 'Периодически меняется', extremes: 'Не имеет', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Разрывна при πn', bounded: 'Не ограничена', asymptotes: 'Вертик: x=πn', period: 'π' }
+    
+    // ✅ ТОЧНЫЕ ФОРМУЛЫ НУЛЕЙ (x = πn...)
+    'sin': { domain: '(-∞; +∞)', range: '[-1; 1]', zeros: 'x = πn, n ∈ ℤ', monotonicity: 'Не монотонна (периодическая)', sign: 'Периодически меняется', extremes: 'min: -1, max: 1', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Непрерывна', bounded: 'Ограничена', asymptotes: 'Нет', period: '2π' },
+    'cos': { domain: '(-∞; +∞)', range: '[-1; 1]', zeros: 'x = π/2 + πn, n ∈ ℤ', monotonicity: 'Не монотонна (периодическая)', sign: 'Периодически меняется', extremes: 'min: -1, max: 1', parity: { result: 'Чётная', desc: 'Симметрия относительно OY' }, continuity: 'Непрерывна', bounded: 'Ограничена', asymptotes: 'Нет', period: '2π' },
+    'tan': { domain: 'Все x, кроме π/2+πn', range: '(-∞; +∞)', zeros: 'x = πn, n ∈ ℤ', monotonicity: 'Возрастает на промежутках', sign: 'Периодически меняется', extremes: 'Не имеет', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Разрывна при π/2+πn', bounded: 'Не ограничена', asymptotes: 'Вертик: x=π/2+πn', period: 'π' },
+    'cot': { domain: 'Все x, кроме πn', range: '(-∞; +∞)', zeros: 'x = π/2 + πn, n ∈ ℤ', monotonicity: 'Убывает на промежутках', sign: 'Периодически меняется', extremes: 'Не имеет', parity: { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }, continuity: 'Разрывна при πn', bounded: 'Не ограничена', asymptotes: 'Вертик: x=πn', period: 'π' }
 };
 
 // ============================================================================
@@ -336,14 +337,13 @@ function applyShiftToProperties(baseProps, shift, type) {
 }
 
 // ============================================================================
-// 9. ФОРМАТИРОВАНИЕ (УВЕЛИЧЕН ПОРОГ ДО 1e9)
+// 9. ФОРМАТИРОВАНИЕ
 // ============================================================================
 function formatNumber(num, precision = 2) {
     if (num === null || num === undefined) return '0';
     const n = typeof num === 'string' ? parseFloat(num) : Number(num);
     if (isNaN(n)) return String(num);
     if (Math.abs(n) < 1e-10) return '0';
-    // ✅ Увеличен порог с 1e6 до 1e9
     if (Math.abs(n) > 1e9) return n > 0 ? '+∞' : '-∞';
     return Math.abs(n) < 0.1 ? n.toExponential(1) : n.toFixed(precision);
 }
@@ -463,17 +463,15 @@ function calculatePropertiesNumerically(func, expr, type) {
 }
 
 // ============================================================================
-// 12. ПОИСК НУЛЕЙ (ДИАПАЗОН ЗАВИСИТ ОТ xRange)
+// 12. ПОИСК НУЛЕЙ
 // ============================================================================
 function findZerosImproved(func, expr, type) {
     if (['sin', 'cos', 'tan', 'cot', 'sqrt', 'exp', 'inverse', 'log', 'abs'].includes(type)) return BASE_PROPERTIES[type]?.zeros || [];
     if (['linear', 'cubic', 'quadratic'].includes(type)) return [0];
     
     const zeros = [];
-    // ✅ ДИАПАЗОН ЗАВИСИТ ОТ ПОЛЗУНКА
     const rangeSlider = document.getElementById('xRange');
     const range = rangeSlider ? parseInt(rangeSlider.value) : 10;
-    // Адаптивный шаг: чем больше диапазон, тем мельче шаг
     const step = Math.max(0.01, range / 2000);
     
     for (let x = -range; x <= range; x += step) {
@@ -499,7 +497,7 @@ function findZerosImproved(func, expr, type) {
 }
 
 // ============================================================================
-// 13. ИНТЕРФЕЙС
+// 13. ИНТЕРФЕЙС (С ПОДДЕРЖКОЙ ФОРМУЛ НУЛЕЙ)
 // ============================================================================
 function updatePropertiesDisplay(props) {
     const container = document.getElementById('propertiesOutput');
@@ -538,13 +536,23 @@ function updatePropertiesDisplay(props) {
     items.forEach(item => {
         const val = item.k === 'parity' ? props[item.k] : props[item.k];
         const desc = item.k === 'parity' ? (props[item.k]?.desc || '') : item.d;
+        
         if (val !== undefined && val !== null) {
+            // ✅ ЛОГИКА ОТОБРАЖЕНИЯ:
+            // Если это строка (формула sin/cos) — выводим сразу.
+            let displayValue;
+            if (item.k === 'zeros' && typeof val === 'string') {
+                displayValue = val; 
+            } else {
+                displayValue = item.f ? item.f(val) : val;
+            }
+
             html.push(`
                 <div class="property-item">
                     <div class="property-icon">${item.i}</div>
                     <div class="property-content">
                         <div class="property-title">${item.t}</div>
-                        <div class="property-value">${item.f ? item.f(val) : val}</div>
+                        <div class="property-value">${displayValue}</div>
                         <div class="property-desc">${typeof desc === 'function' ? desc(props[item.k]) : desc}</div>
                     </div>
                 </div>
@@ -591,7 +599,7 @@ function getContinuityValue(expr, type) {
 function calculateRangeNumerically(func, expr, type) {
     if (['sin', 'cos'].includes(type)) return '[-1; 1]';
     if (type === 'exp') return '(0; +∞)';
-    if (type === 'log') return '(-∞; +∞)';
+    if (type === 'log') return '(-∞; +)';
     if (type === 'sqrt' || type === 'abs') return '[0; +∞)';
     if (type === 'inverse') return '(-∞; 0) ∪ (0; +∞)';
     
@@ -655,7 +663,7 @@ function calculateSignIntervalsNumerically(func, expr) {
     
     if (!numericZeros || numericZeros.length === 0) { 
         const t = func.evaluate(0); 
-        if (t !== null) return t > 0 ? 'f(x)>0 при x∈(-∞; +∞)' : 'f(x)<0 при x∈(-∞; +∞)'; 
+        if (t !== null) return t > 0 ? 'f(x)>0 при x∈(-∞; +∞)' : 'f(x)<0 при x∈(-∞; +)'; 
         return 'Не определено'; 
     }
     
@@ -678,7 +686,7 @@ function calculateSignIntervalsNumerically(func, expr) {
 }
 
 // ============================================================================
-// 15. ГРАФИК (С РАЗРЫВАМИ И ПРОВЕРКОЙ PLOTLY)
+// 15. ГРАФИК (ЧИСТЫЙ: БЕЗ РАЗБИЕНИЯ НА ТРЕЙСЫ)
 // ============================================================================
 function plotFunction(func, expr, type, shift) {
     if (typeof Plotly === 'undefined') {
@@ -707,8 +715,11 @@ function plotFunction(func, expr, type, shift) {
 
         const asymptoteThreshold = step * 1.5;
 
+        // ✅ Сбор данных в ОДИН массив. Plotly сам разрывает линию, если y === null
         for (let x = startX; x <= endX; x += step) {
             let skip = false, y = null;
+            
+            // Проверка асимптот
             if (isTan) { let d = Math.abs((x + h - Math.PI/2) % Math.PI); if (d > Math.PI/2) d = Math.PI - d; if (d < asymptoteThreshold) skip = true; }
             else if (isCot) { let d = Math.abs((x + h) % Math.PI); if (d > Math.PI/2) d = Math.PI - d; if (d < asymptoteThreshold) skip = true; }
             else if (isInv && Math.abs(x + h) < 0.05) skip = true;
@@ -716,41 +727,22 @@ function plotFunction(func, expr, type, shift) {
             if (!skip) y = func.evaluate(x);
             if (y !== null && (!isFinite(y) || Math.abs(y) > 1e6)) y = null;
 
+            // Если разрыв — добавляем null (это создаст дырку в графике)
             if (skip || y === null) { xVals.push(x); yVals.push(null); }
             else { xVals.push(x); yVals.push(y); }
         }
         
-        // ✅ РАЗБИВАЕМ НА СЕГМЕНТЫ ДЛЯ РАЗРЫВОВ
-        const traces = [];
-        let segX = [], segY = [];
-
-        for (let i = 0; i < xVals.length; i++) {
-            if (yVals[i] === null) {
-                if (segX.length > 1) {
-                    traces.push({ 
-                        x: [...segX], 
-                        y: [...segY], 
-                        mode: 'lines', 
-                        line: { color: '#2c3e50', width: 3 } 
-                    });
-                    segX = []; 
-                    segY = [];
-                }
-            } else {
-                segX.push(xVals[i]);
-                segY.push(yVals[i]);
-            }
-        }
-        // Добавляем последний сегмент
-        if (segX.length > 1) {
-            traces.push({ 
-                x: segX, 
-                y: segY, 
-                mode: 'lines', 
-                line: { color: '#2c3e50', width: 3 } 
-            });
-        }
+        // ✅ ОДИН ТРЕЙС (вместо множества мелких)
+        const trace = {
+            x: xVals,
+            y: yVals,
+            mode: 'lines',
+            line: { color: '#2c3e50', width: 3 },
+            name: '',           // Пустое имя (чтобы не было "trace 0")
+            hoverinfo: 'x+y'    // Показывать только координаты при наведении
+        };
         
+        // Настройка диапазона Y для функций с асимптотами
         let yRange = null;
         if (isTan || isCot || isInv) yRange = [-10, 10];
         else if (isExp) {
@@ -759,15 +751,17 @@ function plotFunction(func, expr, type, shift) {
             yRange = [v > 0 ? v - 1 : -2, Math.min(maxY * 1.2, 20)];
         }
 
+        // ✅ ОТКЛЮЧАЕМ ЛЕГЕНДУ ПОЛНОСТЬЮ
         const layout = {
+            showlegend: false,  // Легенды нет вообще
             margin: { t: 30, r: 20, b: 40, l: 40 },
             xaxis: { title: 'X', zeroline: true, gridcolor: '#eee', range: [startX, endX] },
             yaxis: { title: 'Y', zeroline: true, gridcolor: '#eee', range: yRange },
             paper_bgcolor: '#fff', plot_bgcolor: '#fff'
         };
         
-        // ✅ Передаём массив трейсов
-        Plotly.react('plot', traces, layout, {displayModeBar: false});
+        // Рисуем один график
+        Plotly.react('plot', [trace], layout, {displayModeBar: false});
         
         if (statusEl) {
             statusEl.textContent = 'Готово';
