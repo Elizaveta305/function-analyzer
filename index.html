@@ -8,12 +8,17 @@
     
     <!-- 🔹 Иконка сайта (favicon) -->
     <link rel="icon" href="favicon.png" type="image/png">
+    <link rel="apple-touch-icon" href="favicon.png">
     
+    <!-- Подключение Plotly -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" defer></script>
+    
+    <!-- Подключение стилей -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
+        <!-- ==================== ШАПКА ==================== -->
         <header>
             <div class="header-content">
                 <h1>🧮 Анализатор функций</h1>
@@ -21,13 +26,26 @@
             </div>
         </header>
 
+        <!-- ==================== ВВОД ФУНКЦИИ ==================== -->
         <div class="input-section">
             <div class="input-card">
                 <h3>🔍 Ввод функции</h3>
                 <div class="input-area">
-                    <input type="text" id="functionInput" aria-label="Введите математическую функцию"
-                           placeholder="Например: x^2 - 4 или exp(x)*sin(x)">
-                    <button id="calculateBtn" class="primary-btn" aria-label="Анализировать функцию">Анализировать</button>
+                    <input 
+                        type="text" 
+                        id="functionInput" 
+                        aria-label="Введите математическую функцию"
+                        placeholder="Например: x^2 - 4 или exp(x)*sin(x)"
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+                    <button 
+                        id="calculateBtn" 
+                        class="primary-btn" 
+                        aria-label="Анализировать функцию"
+                    >
+                        Анализировать
+                    </button>
                 </div>
                 
                 <div class="hint-box">
@@ -35,7 +53,7 @@
                     <ul>
                         <li>Умножение: <code>2*x</code></li>
                         <li>Степень: <code>x^2</code> или <code>x**2</code></li>
-                        <li>Функции: <code>sin(x)</code>, <code>cos(x)</code>, <code>tan(x)</code>, <code>cot(x)</code>, <code>sqrt(x)</code>, <code>exp(x)</code>, <code>log(x)</code></li>
+                        <li>Функции: <code>sin(x)</code>, <code>cos(x)</code>, <code>tan(x)</code>, <code>cot(x)</code>, <code>sqrt(x)</code>, <code>exp(x)</code>, <code>log(x)</code>, <code>abs(x)</code></li>
                         <li>Константы: <code>pi</code>, <code>e</code></li>
                     </ul>
                 </div>
@@ -43,24 +61,27 @@
                 <div class="quick-examples">
                     <p><strong>⚡ Примеры:</strong></p>
                     <div class="example-buttons" role="group" aria-label="Быстрые примеры функций">
-                        <button class="example-btn" data-func="x">x</button>
-                        <button class="example-btn" data-func="x**2">x²</button>
-                        <button class="example-btn" data-func="x^3">x³</button>
-                        <button class="example-btn" data-func="1/x">1/x</button>
-                        <button class="example-btn" data-func="abs(x)">|x|</button>
-                        <button class="example-btn" data-func="sqrt(x)">√x</button>
-                        <button class="example-btn" data-func="exp(x)">eˣ</button>
-                        <button class="example-btn" data-func="log(x)">ln x</button>
-                        <button class="example-btn" data-func="sin(x)">sin x</button>
-                        <button class="example-btn" data-func="cos(x)">cos x</button>
-                        <button class="example-btn" data-func="tan(x)">tan x</button>
-                        <button class="example-btn" data-func="cot(x)">cot x</button>
+                        <button class="example-btn" data-func="x" aria-label="Пример: линейная функция x">x</button>
+                        <button class="example-btn" data-func="x**2" aria-label="Пример: квадратичная функция x²">x²</button>
+                        <button class="example-btn" data-func="x^3" aria-label="Пример: кубическая функция x³">x³</button>
+                        <button class="example-btn" data-func="1/x" aria-label="Пример: обратная пропорциональность 1/x">1/x</button>
+                        <button class="example-btn" data-func="abs(x)" aria-label="Пример: модуль |x|">|x|</button>
+                        <button class="example-btn" data-func="sqrt(x)" aria-label="Пример: квадратный корень √x">√x</button>
+                        <button class="example-btn" data-func="exp(x)" aria-label="Пример: экспонента eˣ">eˣ</button>
+                        <button class="example-btn" data-func="log(x)" aria-label="Пример: натуральный логарифм ln x">ln x</button>
+                        <button class="example-btn" data-func="sin(x)" aria-label="Пример: синус">sin x</button>
+                        <button class="example-btn" data-func="cos(x)" aria-label="Пример: косинус">cos x</button>
+                        <button class="example-btn" data-func="tan(x)" aria-label="Пример: тангенс">tan x</button>
+                        <button class="example-btn" data-func="cot(x)" aria-label="Пример: котангенс">cot x</button>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- ==================== ОСНОВНОЙ КОНТЕНТ ==================== -->
         <div class="main-content">
+            
+            <!-- Карточка: Свойства функции -->
             <div class="properties-card">
                 <div class="card-header">
                     <h3>📋 Свойства функции</h3>
@@ -73,6 +94,7 @@
                 </div>
             </div>
 
+            <!-- Карточка: График -->
             <div class="graph-card">
                 <div class="card-header">
                     <h3>📈 График</h3>
@@ -80,30 +102,48 @@
                         <span id="graphStatus" role="status" aria-live="polite">Ожидание...</span>
                     </div>
                 </div>
+                
+                <!-- Контейнер для Plotly -->
                 <div id="plot" class="plot-container" role="img" aria-label="Интерактивный график функции"></div>
+                
+                <!-- Управление графиком -->
                 <div class="graph-controls">
                     <div class="control-group">
                         <label for="xRange">Масштаб X:</label>
-                        <input type="range" id="xRange" min="1" max="20" value="10" class="range-slider" aria-label="Масштаб оси X">
+                        <input 
+                            type="range" 
+                            id="xRange" 
+                            min="1" 
+                            max="20" 
+                            value="10" 
+                            class="range-slider" 
+                            aria-label="Масштаб оси X от -10 до 10"
+                        >
                         <span class="range-value">±<span id="rangeValue">10</span></span>
                     </div>
                     <div class="control-buttons">
                         <button id="zoomInBtn" class="control-btn" aria-label="Увеличить масштаб">➕</button>
                         <button id="zoomOutBtn" class="control-btn" aria-label="Уменьшить масштаб">➖</button>
                         <button id="resetViewBtn" class="control-btn" aria-label="Сбросить вид">🔄</button>
-                        <button id="exportBtn" class="control-btn" aria-label="Скачать график">📥</button>
+                        <button id="exportBtn" class="control-btn" aria-label="Скачать график как PNG">📥</button>
                     </div>
                 </div>
             </div>
+            
         </div>
 
+        <!-- ==================== ПОДВАЛ ==================== -->
         <footer>
             <div class="footer-content">
                 <p>© 2026 Индивидуальный проект учащегося Предуниверсария ГУУ</p>
                 <p class="footer-note">Разработка веб-приложения для анализа математических функций</p>
+                <!-- Указание авторства иконки (если требуется по лицензии) -->
+                <!-- <p class="footer-note" style="font-size: 0.75rem; color: #aaa;">Icon by <a href="https://www.flaticon.com" style="color: #aaa;">Flaticon</a></p> -->
             </div>
         </footer>
     </div>
+    
+    <!-- Подключение основного скрипта -->
     <script src="script.js"></script>
 </body>
 </html>
