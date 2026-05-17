@@ -23,12 +23,16 @@ function sanitizeInput(expr) {
 // 1. УСИЛЕННАЯ ВАЛИДАЦИЯ (ЗАЩИТА ОТ XSS)
 // ============================================================================
 function validateInput(expr) {
+        // Блокировка цепочек свойств объекта (потенциальный доступ к прототипам)
     if (/\w+\s*\.\s*\w+/.test(expr)) return false;
+        // Запрет опасных конструкций языка JavaScript
     if (/constructor|prototype|__proto__|__defineGetter__|__defineSetter__/.test(expr)) return false;
+    // Блокировка выполнения кода через eval, Function, arrow functions
     if (/new\s+Function|=>|\b(eval|document|window|alert|fetch|import|require|process|global)\b/i.test(expr)) return false;
+        // Дополнительные опасные символы и ключевые слова
     const dangerous = /[;{}'"]|<|>|\$\{|\b(v8|d3|process)\b/i;
     if (dangerous.test(expr)) return false;
-    return true;
+    return true;  // Выражение прошло все проверки
 }
 
 // ============================================================================
@@ -51,17 +55,27 @@ function checkSyntax(expr) {
 // ============================================================================
 // 3a. ЗАМЕНА ПЕРЕМЕННОЙ X (НАДЁЖНАЯ ТОКЕНИЗАЦИЯ)
 // ============================================================================
+/**
+ * replaceVariableX(expr, safeX) — заменяет переменную x на числовое значение
+ * Ключевая особенность: не затрагивает букву 'x' в именах функций (exp, sqrt, max)
+ * @param {string} expr - Математическое выражение
+ * @param {number} safeX - Числовое значение для подстановки
+ * @returns {string} - Выражение с подставленным значением
+ */
 function replaceVariableX(expr, safeX) {
     let result = '';
+        // Посимвольный анализ выражения
     for (let i = 0; i < expr.length; i++) {
         if (expr[i] === 'x') {
+            // Проверяем соседние символы: является ли 'x' изолированной переменной?
             const before = i > 0 ? expr[i-1] : '';
             const after = i < expr.length - 1 ? expr[i+1] : '';
             const isWordChar = /[a-zA-Z0-9_]/;
+            // Заменяем только если 'x' не является частью имени функции
             if (!isWordChar.test(before) && !isWordChar.test(after)) {
-                result += '(' + safeX + ')';
+                result += '(' + safeX + ')'; // Безопасная подстановка в скобках
             } else {
-                result += 'x';
+                result += 'x'; // Сохраняем 'x' внутри имён: exp, sqrt, max
             }
         } else {
             result += expr[i];
@@ -340,7 +354,10 @@ function analyzeFunction() {
             currentFunction = func;
             document.getElementById('currentFunction').textContent = `f(x) = ${expr}`;
             const baseProps = BASE_PROPERTIES[baseType];
-            const properties = baseProps ? applyShiftToProperties(baseProps, shift, baseType) : calculatePropertiesNumerically(func, expr, baseType);
+            const isPolynomialWithShift = ['quadratic', 'cubic', 'linear'].includes(baseType) && (shift.verticalShift !== 0 || shift.horizontalShift !== 0);
+            const properties = (baseProps && !isPolynomialWithShift) 
+    ? applyShiftToProperties(baseProps, shift, baseType) 
+    : calculatePropertiesNumerically(func, expr, baseType);
             properties.typeName = getFunctionTypeName(baseType, shift);
             properties.type = baseType;
             updatePropertiesDisplay(properties);
