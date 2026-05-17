@@ -374,7 +374,7 @@ function analyzeFunction() {
 // 11. ЧИСЛЕННЫЙ РАСЧЁТ
 // ============================================================================
 function calculatePropertiesNumerically(func, expr, type) {
-    return { typeName: getFunctionTypeName(type, {verticalShift: 0, horizontalShift: 0}), type: type, domain: getDomain(expr, type), range: calculateRangeNumerically(func, expr, type), zeros: findZerosImproved(func, expr, type), monotonicity: calculateMonotonicityWithIntervals(func, expr, type), sign: calculateSignIntervalsNumerically(func, expr, type), extremes: calculateExtremesNumerically(func, expr, type), parity: checkParity(func, type), continuity: getContinuityValue(expr, type), bounded: calculateBoundednessNumerically(func), asymptotes: findAsymptotesAdvanced(expr, func, type) };
+    return { typeName: getFunctionTypeName(type, {verticalShift: 0, horizontalShift: 0}), type: type, domain: getDomain(expr, type), range: calculateRangeNumerically(func, expr, type), zeros: findZerosImproved(func, expr, type), monotonicity: calculateMonotonicityWithIntervals(func, expr, type), sign: calculateSignIntervalsNumerically(func, expr, type), extremes: calculateExtremesNumerically(func, expr, type), parity: checkParity(func, type), continuity: getContinuityValue(expr, type), bounded: calculateBoundednessNumerically(func, expr, type), asymptotes: findAsymptotesAdvanced(expr, func, type) };
 }
 
 // ============================================================================
@@ -592,21 +592,16 @@ function calculateExtremesNumerically(func, expr, type) {
     return `min: ${formatNumber(min)}, max: ${formatNumber(max)}`;
 }
 function calculateBoundednessNumerically(func, expr, type) {
-    // 🔧 Квадратичная: определяем направление ветвей
+    // 🔧 Явная проверка для квадратичной функции
     if (type === 'quadratic') {
-        const yNegLarge = func.evaluate(-10000);
-        const yPosLarge = func.evaluate(10000);
-        
-        if (yNegLarge !== null && yPosLarge !== null) {
-            // Обе «бесконечности» положительные → ветви вверх → ограничена снизу
-            if (yNegLarge > 0 && yPosLarge > 0) return 'Ограничена снизу';
-            // Обе отрицательные → ветви вниз → ограничена сверху
-            if (yNegLarge < 0 && yPosLarge < 0) return 'Ограничена сверху';
+        const yVal = func.evaluate(10000); // Проверяем поведение на "бесконечности"
+        if (yVal !== null && isFinite(yVal)) {
+            return yVal > 0 ? 'Ограничена снизу' : 'Ограничена сверху';
         }
         return 'Не ограничена';
     }
     
-    // Общий метод для остальных
+    // Общий метод для остальных функций
     for (let x of [-1000, 1000]) {
         const y = func.evaluate(x);
         if (y !== null && Math.abs(y) > 1e6) return 'Не ограничена';
