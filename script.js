@@ -450,10 +450,120 @@ function showError(msg) { document.getElementById('propertiesOutput').innerHTML 
 function getDomain(expr, type) { if (type === 'log') return '(0; +∞)'; if (type === 'sqrt') return '[0; +∞)'; if (type === 'inverse') return '(-∞; 0) ∪ (0; +∞)'; if (type === 'tan') return 'Все x, кроме π/2+πn'; if (type === 'cot') return 'Все x, кроме πn'; if (type === 'abs') return '(-∞; +∞)'; return '(-∞; +∞)'; }
 function checkParity(func, type) { if (['linear', 'cubic', 'inverse', 'tan', 'cot', 'sin'].includes(type)) return { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }; if (['quadratic', 'cos', 'abs'].includes(type)) return { result: 'Чётная', desc: 'Симметрия относительно OY' }; if (['sqrt', 'log', 'exp'].includes(type)) return { result: 'Общего вида', desc: 'D(f) не симметрична' }; const a = func.evaluate(1), b = func.evaluate(-1); if (a===null||b===null) return { result: 'Не определено', desc: '-' }; if (Math.abs(a-b)<0.001) return { result: 'Чётная', desc: 'Симметрия относительно OY' }; if (Math.abs(a+b)<0.001) return { result: 'Нечётная', desc: 'Симметрия относительно начала координат' }; return { result: 'Общего вида', desc: 'Нет симметрии' }; }
 function getContinuityValue(expr, type) { if (expr.includes('/x')) return 'Разрыв при x=0'; if (type === 'log') return 'Непрерывна на (0; +∞)'; if (type === 'sqrt') return 'Непрерывна на [0; +∞)'; if (type === 'tan') return 'Разрывна при π/2+πn'; if (type === 'cot') return 'Разрывна при πn'; return 'Непрерывна'; }
-function calculateRangeNumerically(func, expr, type) { if (['sin', 'cos'].includes(type)) return '[-1; 1]'; if (type === 'exp') return '(0; +∞)'; if (type === 'log') return '(-∞; +)'; if (type === 'sqrt' || type === 'abs') return '[0; +∞)'; if (type === 'inverse') return '(-∞; 0) ∪ (0; +∞)'; const MAX_ITER = 10000; let min=Infinity, max=-Infinity, iter=0; for(let x=-50; x<=50 && iter<MAX_ITER; x+=0.1){ iter++; const y=func.evaluate(x); if(y!==null&&isFinite(y)){if(y<min)min=y; if(y>max)max=y;} } if(min===Infinity)return 'Не определено'; if(max-min>1000)return '(-∞; +∞)'; return `[${formatNumber(min)}; ${formatNumber(max)}]`; }
+function calculateRangeNumerically(func, expr, type) {
+    // Известные аналитические диапазоны
+    if (['sin', 'cos'].includes(type)) return '[-1; 1]';
+    if (type === 'exp') return '(0; +∞)';
+    if (type === 'log') return '(-∞; +∞)';
+    if (type === 'sqrt' || type === 'abs') return '[0; +∞)';
+    if (type === 'inverse') return '(-∞; 0) ∪ (0; +∞)';
+    
+    // 🔧 Для квадратичной функции: ищем вершину параболы
+    if (type === 'quadratic') {
+        let extremum = null;
+        // Плотный поиск экстремума в диапазоне [-20; 20]
+        for (let x = -20; x <= 20; x += 0.01) {
+            const y = func.evaluate(x);
+            if (y !== null && isFinite(y)) {
+                if (extremum === null || y < extremum) extremum = y;
+            }
+        }
+        // Проверяем поведение на «бесконечности»
+        const yNegLarge = func.evaluate(-1000);
+        const yPosLarge = func.evaluate(1000);
+        
+        if (extremum !== null && yNegLarge !== null && yPosLarge !== null) {
+            if (yNegLarge > extremum && yPosLarge > extremum) {
+                // Парабола ветвями вверх: минимум в вершине
+                return `[${formatNumber(extremum)}; +∞)`;
+            } else if (yNegLarge < extremum && yPosLarge < extremum) {
+                // Парабола ветвями вниз: максимум в вершине
+                return `(-∞; ${formatNumber(extremum)}]`;
+            }
+        }
+        // Запасной вариант
+        return extremum !== null ? `[${formatNumber(extremum)}; +∞)` : '(-∞; +∞)';
+    }
+    
+    // Общий численный метод для остальных
+    const MAX_ITER = 10000;
+    let min = Infinity, max = -Infinity, iter = 0;
+    for (let x = -50; x <= 50 && iter < MAX_ITER; x += 0.1) {
+        iter++;
+        const y = func.evaluate(x);
+        if (y !== null && isFinite(y)) {
+            if (y < min) min = y;
+            if (y > max) max = y;
+        }
+    }
+    if (min === Infinity) return 'Не определено';
+    if (max - min > 1000) return '(-∞; +∞)';
+    return `[${formatNumber(min)}; ${formatNumber(max)}]`;
+}
 function calculateMonotonicityWithIntervals(func, expr, type) { if (BASE_PROPERTIES[type]?.monotonicity) return BASE_PROPERTIES[type].monotonicity; let inc=0, dec=0; const pts=[-10,-5,-1,-0.1,0.1,1,5,10]; for(let i=0;i<pts.length-1;i++){const y1=func.evaluate(pts[i]), y2=func.evaluate(pts[i+1]); if(y1!==null&&y2!==null){if(y2>y1+0.01)inc++; else if(y2<y1-0.01)dec++;}} if(inc>0&&dec===0)return 'Возрастает на ℝ'; if(dec>0&&inc===0)return 'Убывает на ℝ'; return 'Не монотонна'; }
-function calculateExtremesNumerically(func, expr, type) { if (['linear', 'cubic', 'inverse', 'tan', 'cot', 'log'].includes(type)) return 'Не имеет (±∞)'; if (type === 'exp') return 'Не имеет'; if (['sin', 'cos'].includes(type)) return 'min: -1, max: 1'; if (type === 'abs') return 'min: 0, max: не имеет'; const MAX_ITER = 10000; let min=Infinity, max=-Infinity, iter=0; for(let x=-20; x<=20 && iter<MAX_ITER; x+=0.1){ iter++; const y=func.evaluate(x); if(y!==null&&isFinite(y)){if(y<min)min=y; if(y>max)max=y;} } if(min===Infinity)return 'Не определено'; if(max-min>1000)return 'Не имеет (±∞)'; return `min: ${formatNumber(min)}, max: ${formatNumber(max)}`; }
-function calculateBoundednessNumerically(func) { for(let x of [-100,100]){const y=func.evaluate(x); if(y!==null&&Math.abs(y)>1000)return 'Не ограничена';} return 'Ограничена (локально)'; }
+function calculateExtremesNumerically(func, expr, type) {
+    if (['linear', 'cubic', 'inverse', 'tan', 'cot', 'log'].includes(type)) return 'Не имеет (±∞)';
+    if (type === 'exp') return 'Не имеет';
+    if (['sin', 'cos'].includes(type)) return 'min: -1, max: 1';
+    if (type === 'abs') return 'min: 0, max: не имеет';
+    
+    // 🔧 Для квадратичной: определяем тип экстремума
+    if (type === 'quadratic') {
+        let extremum = null;
+        for (let x = -50; x <= 50; x += 0.01) {
+            const y = func.evaluate(x);
+            if (y !== null && isFinite(y)) {
+                if (extremum === null || y < extremum) extremum = y;
+            }
+        }
+        const yLarge = func.evaluate(1000);
+        if (extremum !== null && yLarge !== null) {
+            if (yLarge > extremum) {
+                return `min: ${formatNumber(extremum)}, max: не имеет`;
+            } else {
+                return `min: не имеет, max: ${formatNumber(extremum)}`;
+            }
+        }
+        return extremum !== null ? `extremum: ${formatNumber(extremum)}` : 'Не определено';
+    }
+    
+    // Общий метод
+    const MAX_ITER = 10000;
+    let min = Infinity, max = -Infinity, iter = 0;
+    for (let x = -20; x <= 20 && iter < MAX_ITER; x += 0.1) {
+        iter++;
+        const y = func.evaluate(x);
+        if (y !== null && isFinite(y)) {
+            if (y < min) min = y;
+            if (y > max) max = y;
+        }
+    }
+    if (min === Infinity) return 'Не определено';
+    if (max - min > 1000) return 'Не имеет (±∞)';
+    return `min: ${formatNumber(min)}, max: ${formatNumber(max)}`;
+}
+function calculateBoundednessNumerically(func, expr, type) {
+    // 🔧 Для квадратичной: проверяем направление ветвей
+    if (type === 'quadratic') {
+        const yNegLarge = func.evaluate(-1000);
+        const yPosLarge = func.evaluate(1000);
+        if (yNegLarge !== null && yPosLarge !== null) {
+            if (yNegLarge > 0 && yPosLarge > 0) {
+                return 'Ограничена снизу'; // Ветви вверх
+            } else if (yNegLarge < 0 && yPosLarge < 0) {
+                return 'Ограничена сверху'; // Ветви вниз
+            }
+        }
+        return 'Не ограничена';
+    }
+    
+    // Общий метод
+    for (let x of [-100, 100]) {
+        const y = func.evaluate(x);
+        if (y !== null && Math.abs(y) > 1000) return 'Не ограничена';
+    }
+    return 'Ограничена (локально)';
+}
 function findAsymptotesAdvanced(expr, func, type) { if (type === 'inverse') return 'Вертик: x=0; Гориз: y=0'; if (type === 'tan') return 'Вертик: x=π/2+πn'; if (type === 'cot') return 'Вертик: x=πn'; if (type === 'log') return 'Вертик: x=0'; if (type === 'exp') return 'Гориз: y=0 (x→-∞)'; return 'Нет'; }
 function calculateSignIntervalsNumerically(func, expr) { const zeros = findZerosImproved(func, expr, 'unknown'); const numericZeros = zeros.filter(z => typeof z === 'number' && !isNaN(z)); if (numericZeros.length === 0 && zeros.length > 0) return 'Знакопостоянство: периодическое / требует ручного анализа'; if (!numericZeros || numericZeros.length === 0) { const t = func.evaluate(0); if (t !== null) return t > 0 ? 'f(x)>0 при x∈(-∞; +∞)' : 'f(x)<0 при x∈(-∞; +)'; return 'Не определено'; } let pos=[], neg=[]; let pts=[-10, ...numericZeros, 10]; for(let i=0;i<pts.length-1;i++){ let mid=(pts[i]+pts[i+1])/2; const val=func.evaluate(mid); if(val!==null){ const int=`(${Number(pts[i]).toFixed(1)}; ${Number(pts[i+1]).toFixed(1)})`; if(val>0)pos.push(int); else neg.push(int); } } let res=''; if(pos.length>0)res+=`f(x)>0 при x∈${pos.join(' ∪ ')}. `; if(neg.length>0)res+=`f(x)<0 при x∈${neg.join(' ∪ ')}`; return res.length>70?res.substring(0,65)+'...':res; }
 
