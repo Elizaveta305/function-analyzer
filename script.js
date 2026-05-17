@@ -354,8 +354,8 @@ function analyzeFunction() {
             currentFunction = func;
             document.getElementById('currentFunction').textContent = `f(x) = ${expr}`;
             const baseProps = BASE_PROPERTIES[baseType];
-            const isPolynomialWithShift = ['quadratic', 'cubic', 'linear'].includes(baseType) && (shift.verticalShift !== 0 || shift.horizontalShift !== 0);
-            const properties = (baseProps && !isPolynomialWithShift) 
+            const isPolynomial = ['quadratic', 'cubic', 'linear'].includes(baseType);
+            const properties = (baseProps && !isPolynomial) 
     ? applyShiftToProperties(baseProps, shift, baseType) 
     : calculatePropertiesNumerically(func, expr, baseType);
             properties.typeName = getFunctionTypeName(baseType, shift);
