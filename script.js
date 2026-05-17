@@ -381,18 +381,29 @@ function calculatePropertiesNumerically(func, expr, type) {
 // 12. ПОИСК НУЛЕЙ
 // ============================================================================
 function findZerosImproved(func, expr, type) {
-    if (['sin', 'cos', 'tan', 'cot', 'sqrt', 'exp', 'inverse', 'log', 'abs'].includes(type)) return BASE_PROPERTIES[type]?.zeros || [];
-    if (['linear', 'cubic', 'quadratic'].includes(type)) return [0];
+    // Для тригонометрии и спец. функций — аналитические формулы
+    if (['sin', 'cos', 'tan', 'cot'].includes(type)) return BASE_PROPERTIES[type]?.zeros || [];
+    if (type === 'sqrt' || type === 'exp' || type === 'inverse' || type === 'log' || type === 'abs') {
+        return BASE_PROPERTIES[type]?.zeros || [];
+    }
+    
+    // 🔧 Для полиномов (linear, quadratic, cubic) — ВСЕГДА численный поиск!
+    // Это правильно учитывает сдвиги: x²-4, x²+2x+1 и т.д.
+    
     const zeros = [];
     const rangeSlider = document.getElementById('xRange');
     const range = rangeSlider ? parseInt(rangeSlider.value) : 10;
     const step = Math.max(0.01, range / 2000);
+    
     for (let x = -range; x <= range; x += step) {
         if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
         const y1 = func.evaluate(x), y2 = func.evaluate(x + step);
         if (y1 === null || y2 === null) continue;
-        if (Math.abs(y1) < 0.01) zeros.push(x);
-        else if (y1 * y2 < 0) {
+        
+        if (Math.abs(y1) < 0.01) {
+            zeros.push(x);
+        } else if (y1 * y2 < 0) {
+            // Метод половинного деления для точности
             let a = x, b = x + step;
             for (let i = 0; i < 20; i++) {
                 let m = (a + b) / 2;
@@ -403,6 +414,7 @@ function findZerosImproved(func, expr, type) {
             zeros.push((a + b) / 2);
         }
     }
+
     return zeros.filter((z, i, arr) => i === 0 || Math.abs(z - arr[i-1]) > 0.5);
 }
 
