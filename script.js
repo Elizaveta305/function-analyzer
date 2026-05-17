@@ -381,41 +381,90 @@ function calculatePropertiesNumerically(func, expr, type) {
 // 12. ПОИСК НУЛЕЙ
 // ============================================================================
 function findZerosImproved(func, expr, type) {
-    // Для тригонометрии и спец. функций — аналитические формулы
+    // Аналитические формулы для спец. функций
     if (['sin', 'cos', 'tan', 'cot'].includes(type)) return BASE_PROPERTIES[type]?.zeros || [];
-    if (type === 'sqrt' || type === 'exp' || type === 'inverse' || type === 'log' || type === 'abs') {
-        return BASE_PROPERTIES[type]?.zeros || [];
+    if (['sqrt', 'exp', 'inverse', 'log', 'abs'].includes(type)) return BASE_PROPERTIES[type]?.zeros || [];
+    
+    // 🔧 Квадратичная: аналитическое решение через дискриминант
+    if (type === 'quadratic') {
+        // Пробуем извлечь коэффициенты: ax² + bx + c
+        const clean = expr.toLowerCase().replace(/\s+/g, '').replace(/\^/g, '**');
+        
+        // Простой парсер для вида: [a]x² [+ bx] [+ c]
+        let a = 1, b = 0, c = 0;
+        
+        // Коэффициент при x²
+        const x2 = clean.match(/([+-]?\d*\.?\d*)\*?x\*\*2/);
+        if (x2 && x2[1] && x2[1] !== '' && x2[1] !== '+' && x2[1] !== '-') {
+            a = parseFloat(x2[1].replace('*', ''));
+        }
+        
+        // Коэффициент при x (линейный член) — осторожно, не захватить x²
+        const x1 = clean.match(/([+-]\d*\.?\d*)\*x(?!\*\*)/);
+        if (x1) {
+            let coef = x1[1].replace('*', '');
+            if (coef === '' || coef === '+') coef = '1';
+            if (coef === '-') coef = '-1';
+            b = parseFloat(coef);
+        }
+        
+        // Свободный член: число в конце, не привязанное к x
+        const parts = clean.split(/(?=[+-](?!$))/);
+        for (let part of parts) {
+            if (!part.includes('x') && /^-?\d+\.?\d*$/.test(part)) {
+                c = parseFloat(part);
+                break;
+            }
+        }
+        
+        // Решаем квадратное уравнение
+        if (a !== 0) {
+            const D = b*b - 4*a*c;
+            if (D < -1e-10) return []; // Нет действительных корней
+            if (Math.abs(D) < 1e-10) return [formatNumber(-b / (2*a))]; // Один корень
+            const sqrtD = Math.sqrt(Math.max(0, D));
+            const z1 = (-b - sqrtD) / (2*a);
+            const z2 = (-b + sqrtD) / (2*a);
+            return [formatNumber(z1), formatNumber(z2)].filter((z, i, arr) => i === 0 || Math.abs(z - arr[i-1]) > 0.1);
+        }
+        // fallback на численный метод
     }
     
-    // 🔧 Для полиномов (linear, quadratic, cubic) — ВСЕГДА численный поиск!
-    // Это правильно учитывает сдвиги: x²-4, x²+2x+1 и т.д.
-    
+    // Численный поиск для остальных
     const zeros = [];
     const rangeSlider = document.getElementById('xRange');
     const range = rangeSlider ? parseInt(rangeSlider.value) : 10;
-    const step = Math.max(0.01, range / 2000);
+    const step = Math.max(0.001, range / 5000);
     
     for (let x = -range; x <= range; x += step) {
         if (expr.includes('/x') && Math.abs(x) < 0.1) continue;
         const y1 = func.evaluate(x), y2 = func.evaluate(x + step);
         if (y1 === null || y2 === null) continue;
         
-        if (Math.abs(y1) < 0.01) {
-            zeros.push(x);
+        // 🔧 Более строгий порог для нуля
+        if (Math.abs(y1) < 0.001) {
+            // Для квадратичной: если корень очень близок к целому — округляем
+            if (type === 'quadratic' && Math.abs(y1) < 1e-6) {
+                const rounded = Math.round(x * 100) / 100;
+                if (!zeros.some(z => Math.abs(z - rounded) < 0.15)) zeros.push(rounded);
+            } else {
+                if (!zeros.some(z => Math.abs(z - x) < 0.15)) zeros.push(x);
+            }
         } else if (y1 * y2 < 0) {
-            // Метод половинного деления для точности
+            // Метод половинного деления
             let a = x, b = x + step;
-            for (let i = 0; i < 20; i++) {
+            for (let i = 0; i < 25; i++) {
                 let m = (a + b) / 2;
                 const fa = func.evaluate(a), fm = func.evaluate(m);
                 if (fa === null || fm === null) break;
                 if (fa * fm <= 0) b = m; else a = m;
             }
-            zeros.push((a + b) / 2);
+            const zero = (a + b) / 2;
+            if (!zeros.some(z => Math.abs(z - zero) < 0.15)) zeros.push(zero);
         }
     }
-
-    return zeros.filter((z, i, arr) => i === 0 || Math.abs(z - arr[i-1]) > 0.5);
+    
+    return zeros;
 }
 
 // ============================================================================
@@ -543,29 +592,96 @@ function calculateExtremesNumerically(func, expr, type) {
     return `min: ${formatNumber(min)}, max: ${formatNumber(max)}`;
 }
 function calculateBoundednessNumerically(func, expr, type) {
-    // 🔧 Для квадратичной: проверяем направление ветвей
+    // 🔧 Квадратичная: определяем направление ветвей
     if (type === 'quadratic') {
-        const yNegLarge = func.evaluate(-1000);
-        const yPosLarge = func.evaluate(1000);
+        const yNegLarge = func.evaluate(-10000);
+        const yPosLarge = func.evaluate(10000);
+        
         if (yNegLarge !== null && yPosLarge !== null) {
-            if (yNegLarge > 0 && yPosLarge > 0) {
-                return 'Ограничена снизу'; // Ветви вверх
-            } else if (yNegLarge < 0 && yPosLarge < 0) {
-                return 'Ограничена сверху'; // Ветви вниз
-            }
+            // Обе «бесконечности» положительные → ветви вверх → ограничена снизу
+            if (yNegLarge > 0 && yPosLarge > 0) return 'Ограничена снизу';
+            // Обе отрицательные → ветви вниз → ограничена сверху
+            if (yNegLarge < 0 && yPosLarge < 0) return 'Ограничена сверху';
         }
         return 'Не ограничена';
     }
     
-    // Общий метод
-    for (let x of [-100, 100]) {
+    // Общий метод для остальных
+    for (let x of [-1000, 1000]) {
         const y = func.evaluate(x);
-        if (y !== null && Math.abs(y) > 1000) return 'Не ограничена';
+        if (y !== null && Math.abs(y) > 1e6) return 'Не ограничена';
     }
     return 'Ограничена (локально)';
 }
 function findAsymptotesAdvanced(expr, func, type) { if (type === 'inverse') return 'Вертик: x=0; Гориз: y=0'; if (type === 'tan') return 'Вертик: x=π/2+πn'; if (type === 'cot') return 'Вертик: x=πn'; if (type === 'log') return 'Вертик: x=0'; if (type === 'exp') return 'Гориз: y=0 (x→-∞)'; return 'Нет'; }
-function calculateSignIntervalsNumerically(func, expr) { const zeros = findZerosImproved(func, expr, 'unknown'); const numericZeros = zeros.filter(z => typeof z === 'number' && !isNaN(z)); if (numericZeros.length === 0 && zeros.length > 0) return 'Знакопостоянство: периодическое / требует ручного анализа'; if (!numericZeros || numericZeros.length === 0) { const t = func.evaluate(0); if (t !== null) return t > 0 ? 'f(x)>0 при x∈(-∞; +∞)' : 'f(x)<0 при x∈(-∞; +)'; return 'Не определено'; } let pos=[], neg=[]; let pts=[-10, ...numericZeros, 10]; for(let i=0;i<pts.length-1;i++){ let mid=(pts[i]+pts[i+1])/2; const val=func.evaluate(mid); if(val!==null){ const int=`(${Number(pts[i]).toFixed(1)}; ${Number(pts[i+1]).toFixed(1)})`; if(val>0)pos.push(int); else neg.push(int); } } let res=''; if(pos.length>0)res+=`f(x)>0 при x∈${pos.join(' ∪ ')}. `; if(neg.length>0)res+=`f(x)<0 при x∈${neg.join(' ∪ ')}`; return res.length>70?res.substring(0,65)+'...':res; }
+function calculateSignIntervalsNumerically(func, expr, type) {
+    const zeros = findZerosImproved(func, expr, type);
+    
+    // 🔧 Для квадратичной: аналитический вывод знака
+    if (type === 'quadratic' && zeros.length <= 2) {
+        // Определяем направление ветвей
+        const yLarge = func.evaluate(10000);
+        const branchUp = yLarge !== null && yLarge > 0;
+        
+        if (zeros.length === 0) {
+            // Нет корней: знак постоянный
+            const test = func.evaluate(0);
+            return test !== null && test > 0 
+                ? 'f(x)>0 при всех x' 
+                : 'f(x)<0 при всех x';
+        }
+        
+        if (zeros.length === 1) {
+            // Один корень (вершина на оси): знак не меняется, кроме точки
+            const z = zeros[0];
+            return branchUp 
+                ? `f(x)>0 при всех x, кроме x=${z}` 
+                : `f(x)<0 при всех x, кроме x=${z}`;
+        }
+        
+        // Два корня: интервалы
+        const [z1, z2] = zeros.sort((a, b) => a - b);
+        if (branchUp) {
+            return `f(x)>0 при x∈(-∞; ${z1}) ∪ (${z2}; +∞); f(x)<0 при x∈(${z1}; ${z2})`;
+        } else {
+            return `f(x)<0 при x∈(-∞; ${z1}) ∪ (${z2}; +∞); f(x)>0 при x∈(${z1}; ${z2})`;
+        }
+    }
+    
+    // Численный метод для остальных (с бесконечными границами)
+    const numericZeros = zeros.filter(z => typeof z === 'number' && !isNaN(z)).sort((a, b) => a - b);
+    
+    if (numericZeros.length === 0) {
+        const t = func.evaluate(0);
+        if (t !== null) return t > 0 ? 'f(x)>0 при всех x' : 'f(x)<0 при всех x';
+        return 'Не определено';
+    }
+    
+    // Проверяем знак СЛЕВА от первого корня
+    const leftTest = func.evaluate(numericZeros[0] - 100);
+    const signLeft = leftTest !== null && leftTest > 0 ? '+' : '-';
+    
+    let pos = [], neg = [];
+    let currentSign = signLeft;
+    
+    // Генерируем интервалы
+    let start = '-∞';
+    for (let i = 0; i < numericZeros.length; i++) {
+        const z = numericZeros[i];
+        const end = (i === numericZeros.length - 1) ? '+∞' : numericZeros[i+1];
+        
+        if (currentSign === '+') pos.push(`(${start}; ${z})`);
+        else neg.push(`(${start}; ${z})`);
+        
+        start = z;
+        currentSign = currentSign === '+' ? '-' : '+';
+    }
+    
+    let res = '';
+    if (pos.length > 0) res += `f(x)>0 при x∈${pos.join(' ∪ ')}. `;
+    if (neg.length > 0) res += `f(x)<0 при x∈${neg.join(' ∪ ')}`;
+    return res.length > 80 ? res.substring(0, 75) + '...' : res;
+}
 
 // ============================================================================
 // 15. ГРАФИК (С ОЧИСТКОЙ PLOTLY)
